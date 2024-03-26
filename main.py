@@ -33,7 +33,8 @@ def main():
                 pyautogui.press('right')
                 pyautogui.press('tab', presses=3)
                 pyautogui.press('enter')
-                name_files(naming_template, placeholder_values[xy_name], xy_name)
+                print("Debug")
+                # name_files(naming_template, placeholder_values[xy_name], xy_name)
             else:
                 print("Image not found within the time limit.")
                 break
@@ -85,7 +86,7 @@ channel_orders_list = defineChannel(int(input("How many channels were imaged? ")
 print("Channel Orders:", channel_orders_list)
 
 # Setting up the app to use the UIA backend of BZ-X800 Analyzer and focusing on it
-app = pywinauto.Application(backend="uia").connect(process=6232)
+app = pywinauto.Application(backend="uia").connect(process=21140)
 main_window = app.window(title="BZ-X800 Analyzer")
 
 # Defines the ID of the "Stitch" button
