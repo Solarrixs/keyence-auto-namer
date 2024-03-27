@@ -38,16 +38,35 @@ def main():
             pyautogui.press('right')
             pyautogui.press('tab', presses=3)
             pyautogui.press('enter')
-            break
-            # name_files(naming_template, placeholder_values[xy_name], xy_name)
+            window_location = locate_new_window('image2.png')
+            if window_location:
+                name_files(naming_template, placeholder_values, xy_name, window_location)
+            else:
+                print("Matching window not found.")
     except Exception as e:
         print(f"Failed on running {run_name}. Error: {e}")
 
-def name_files(naming_template, placeholder_values, xy_name):
+def name_files(naming_template, placeholder_values, xy_name, window_location):
+    file_button_location = pyautogui.locateOnScreen('file_button.png', confidence=0.9, region=window_location)
+    if file_button_location:
+        file_button_center = pyautogui.center(file_button_location)
+        pyautogui.click(file_button_center)
+        pyautogui.press('tab', presses=5)
+        pyautogui.press('enter')
+    else:
+        print("File button not found within the window.")
     for channel in channel_orders_list:
         file_name = naming_template.format(**placeholder_values, C=channel)
         print(f"Naming file for {xy_name} - {channel}: {file_name}")
         # Add code here to actually rename the files using the generated file_name
+    exit_button_location = pyautogui.locateOnScreen('exit_button.png', confidence=0.9, region=window_location)
+    if exit_button_location:
+        exit_button_center = pyautogui.center(exit_button_location)
+        pyautogui.click(exit_button_center)
+        pyautogui.press('tab', presses=1)
+        pyautogui.press('enter')
+    else:
+        print("Exit button not found within the window.")
 
 def defineChannel(channel_count):
     channel_orders_list = []
@@ -74,6 +93,16 @@ def check_for_image(image_path):
         if time.time() - start_time > 5 * 60:  # 5 minutes
             print("Image not found after 5 minutes... terminating search.")
             return False
+        
+def locate_new_window(reference_image):
+    previous_matches = []
+    while True:
+        current_matches = list(pyautogui.locateAllOnScreen(reference_image))
+        if current_matches == previous_matches:
+            break
+        previous_matches = current_matches
+        time.sleep(0.5)
+    return previous_matches[-1]  # Return the last matched window
 
 # Setting up the app to use the UIA backend of BZ-X800 Analyzer and focusing on it
 app = pywinauto.Application(backend="uia").connect(title="BZ-X800 Analyzer") #(process=21140)
