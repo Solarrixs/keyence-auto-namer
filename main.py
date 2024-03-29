@@ -40,6 +40,12 @@ def main():
             pyautogui.press('right')
             pyautogui.press('tab', presses=3)
             pyautogui.press('enter')
+            
+            time.sleep(10)
+            
+            name_files(naming_template, placeholder_values, xy_name)
+            
+            # Write code to click Cancel on the Stitch image - that should be the final step!
                 
     except Exception as e:
         print(f"Failed on running {run_name}. Error: {e}")
@@ -70,7 +76,7 @@ def check_for_image(image_path):
             print("Image not found after 5 minutes... terminating search.")
             return False
         
-def name_files():
+def name_files(naming_template, placeholder_values, xy_name):
     # Filter windows with titles matching Wide Image Viewer
     windows = pywinauto.Desktop(backend="win32").windows()
     matching_windows = [win for win in windows if "BZ-X800 Wide Image Viewer" in win.window_text()]
@@ -87,15 +93,32 @@ def name_files():
         file_button = toolbar.child_window(title="File", control_type="Button")
         file_button.click_input()
         
-        time.sleep(2)
-        
         # Begin Naming
         pyautogui.press('tab', presses=4)
         pyautogui.press('enter')
         pyautogui.press('tab', presses=1)
         pyautogui.press('enter')
         
+        # Confirming file saving location
+        if i == 0:
+            file_path = main_window.child_window(auto_id="1001", control_type="Edit").get_value()
+            dialog = main_window.child_window(title="Browse For Folder", control_type="Window")
+            dialog.wait('visible', timeout=10)  
+            dialog.child_window(auto_id="14148", control_type="Edit").set_text(file_path)
+            confirm_result = pywinauto.controls.win32_controls.ButtonWrapper(dialog.OK.handle).click()
+
+            if confirm_result == pywinauto.controls.win32_controls.IDHWNDWRAPPER:
+                file_path = dialog.child_window(auto_id="14148", control_type="Edit").get_value()
+            else:
+                print("File path confirmation canceled. Using the default file path.")
+
+            dialog.close()
+        
         # Naming Code
+        for channel in channel_orders_list:
+            file_name = naming_template.format(C=channel, **placeholder_values[xy_name])
+            pyautogui.typewrite(file_name)
+            pyautogui.press('enter')
         pyautogui.press('tab', presses=2)
         pyautogui.press('enter')
         
