@@ -6,7 +6,7 @@ import os
 def main():
     run_name = input("Enter Run Name: ")
     xy_count = int(input("Enter the number of XY sequences: "))
-    naming_template = input("Enter the naming template (use {1}, {2}, etc. for placeholders and {C} for channel): ")
+    naming_template = input("Enter the naming template (use {key1}, {key2}, etc. for placeholders and {C} for channel): ")
 
     # Code for naming the XY sequences with your custom naming template defined above
     placeholder_values = {}
@@ -14,8 +14,8 @@ def main():
         xy_name = f"XY{i+1:02}"
         placeholder_values[xy_name] = {}
         for placeholder in range(1, naming_template.count("{") - naming_template.count("{C}") + 1):
-            value = input(f"Enter placeholder {{{placeholder}}} for {xy_name}: ")
-            placeholder_values[xy_name][placeholder] = value
+            value = input(f"Enter placeholder {{key{placeholder}}} for {xy_name}: ")
+            placeholder_values[xy_name][f'key{placeholder}'] = value
 
     try:
         main_window.set_focus()
@@ -25,27 +25,41 @@ def main():
         children = run_tree_item.children() # Loop on the XY sequences within the run name defined above
         for child in children:
             xy_name = child.window_text()
-            print(f"Child item: {xy_name}")
+            print(f"Processing child item: {xy_name}")
             child.click_input() # Cick on the XY sequences
             stitch_button.click_input() # Stitch Button
             pyautogui.press('f') # Full Focus
             pyautogui.press('enter')
             
+            # Check if stitch image is ready
             file_name_1 = os.path.join(os.path.dirname(__file__), 'image1.png')
             assert os.path.exists(file_name_1)
             check_for_image(file_name_1)
-            time.sleep(2)
+            time.sleep(0.1)
             
+            # Uncompressed + start stitch
             pyautogui.press('tab', presses=6)
             pyautogui.press('right')
             pyautogui.press('tab', presses=3)
             pyautogui.press('enter')
+
+            start_time = time.time()
+            while True:
+                windows = pywinauto.Desktop(backend="win32").windows()
+                matching_windows = [win for win in windows if "BZ-X800 Wide Image Viewer" in win.window_text()]
+                if matching_windows:  # When the first instance of the Wide Image Viewer is found, break the loop and check the time
+                    break
+                time.sleep(0.1)
+            end_time = time.time()
+            delay_time = end_time - start_time
+            print("Waiting for", round(delay_time*len(channel_orders_list), 2), "seconds")
+            time.sleep(delay_time*len(channel_orders_list))
             
-            time.sleep(10)
+            name_files(naming_template, placeholder_values, xy_name, delay_time)
             
-            name_files(naming_template, placeholder_values, xy_name)
-            
-            # Write code to click Cancel on the Stitch image - that should be the final step!
+            # Click Cancel on Stitch Image
+            pyautogui.press('tab', presses=2)
+            pyautogui.press('enter')
                 
     except Exception as e:
         print(f"Failed on running {run_name}. Error: {e}")
@@ -70,13 +84,12 @@ def check_for_image(image_path):
                 pyautogui.click(location)
                 return False
         except Exception:
-            print("Image not found, trying again...",)
             time.sleep(2)
         if time.time() - start_time > 5 * 60:  # 5 minutes
             print("Image not found after 5 minutes... terminating search.")
             return False
         
-def name_files(naming_template, placeholder_values, xy_name):
+def name_files(naming_template, placeholder_values, xy_name, delay):
     # Filter windows with titles matching Wide Image Viewer
     windows = pywinauto.Desktop(backend="win32").windows()
     matching_windows = [win for win in windows if "BZ-X800 Wide Image Viewer" in win.window_text()]
@@ -93,42 +106,26 @@ def name_files(naming_template, placeholder_values, xy_name):
         file_button = toolbar.child_window(title="File", control_type="Button")
         file_button.click_input()
         
-        # Begin Naming
+        # Click Export in Original Scale
         pyautogui.press('tab', presses=4)
         pyautogui.press('enter')
         pyautogui.press('tab', presses=1)
         pyautogui.press('enter')
         
-        # Confirming file saving location
-        if i == 0:
-            file_path = main_window.child_window(auto_id="1001", control_type="Edit").get_value()
-            dialog = main_window.child_window(title="Browse For Folder", control_type="Window")
-            dialog.wait('visible', timeout=10)  
-            dialog.child_window(auto_id="14148", control_type="Edit").set_text(file_path)
-            confirm_result = pywinauto.controls.win32_controls.ButtonWrapper(dialog.OK.handle).click()
-
-            if confirm_result == pywinauto.controls.win32_controls.IDHWNDWRAPPER:
-                file_path = dialog.child_window(auto_id="14148", control_type="Edit").get_value()
-            else:
-                print("File path confirmation canceled. Using the default file path.")
-
-            dialog.close()
-        
         # Naming Code
-        for channel in channel_orders_list:
-            file_name = naming_template.format(C=channel, **placeholder_values[xy_name])
-            pyautogui.typewrite(file_name)
-            pyautogui.press('enter')
+        channel = channel_orders_list[i]
+        file_name = naming_template.format(C=channel, **placeholder_values[xy_name])
+        print(f"Naming file: {file_name}")
+        pyautogui.write(file_name)
         pyautogui.press('tab', presses=2)
         pyautogui.press('enter')
         
         # Close Image
+        time.sleep(delay)
         pyautogui.hotkey('alt', 'f4')
         pyautogui.press('tab', presses=1)
         pyautogui.press('enter')
-        
-    else:
-        print("No matching windows found.")
+        print(channel + " image closed.")
 
 # Setting up the app to use the UIA backend of BZ-X800 Analyzer and focusing on it
 app = pywinauto.Application(backend="uia").connect(title="BZ-X800 Analyzer")
