@@ -28,11 +28,18 @@ def main():
             print(f"Processing child item: {xy_name}")
             child.click_input() # Click on the XY sequences
             stitch_button.click_input() # Stitch Button
-            pyautogui.press('f') # Full Focus
-            pyautogui.press('enter')
+            
+            if stitchtype == "Full":
+                pyautogui.press('f')
+                pyautogui.press('enter')
+            elif stitchtype == "Load":
+                pyautogui.press('l')
             
             # Check if stitch image is ready
-            file_name_1 = os.path.join(os.path.dirname(__file__), 'image1.png')
+            if overlay == "Y":
+                file_name_1 = os.path.join(os.path.dirname(__file__), 'overlay.png')
+            elif overlay == "N":
+                file_name_1 = os.path.join(os.path.dirname(__file__), 'nooverlay.png')
             assert os.path.exists(file_name_1)
             check_for_image(file_name_1)
             time.sleep(0.1)
@@ -40,7 +47,10 @@ def main():
             # Uncompressed + start stitch
             pyautogui.press('tab', presses=6)
             pyautogui.press('right')
-            pyautogui.press('tab', presses=3)
+            if overlay == "Y":
+                pyautogui.press('tab', presses=3)
+            elif overlay == "N":
+                pyautogui.press('tab', presses=2)
             pyautogui.press('enter')
 
             start_time = time.time()
@@ -58,6 +68,7 @@ def main():
             name_files(naming_template, placeholder_values, xy_name, delay_time)
             
             # Click Cancel on Stitch Image
+            time.sleep(delay_time)
             pyautogui.press('tab', presses=2)
             pyautogui.press('enter')
                 
@@ -137,6 +148,9 @@ stitch_button = app.window(title="BZ-X800 Analyzer").child_window(title="Stitch"
 # Setting up the Channel Orders
 channel_orders_list = defineChannel(int(input("How many channels were imaged? ")))
 print("Channel Orders:", channel_orders_list)
+
+stitchtype = input("Stitch Type 'Full' or 'Load': ")
+overlay  = input("Overlay Image? (Y/N): ")
 
 # Run the main function
 main()
