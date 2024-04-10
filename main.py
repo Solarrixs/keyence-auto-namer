@@ -2,11 +2,14 @@ import pywinauto
 import pyautogui
 import time
 import os
+import sys
 
 def main():
     run_name = input("Enter Run Name: ")
     xy_count = int(input("Enter the number of XY sequences: "))
-    naming_template = input("Enter the naming template (use {key1}, {key2}, etc. for placeholders and {C} for channel): ")
+    naming_template = input("Enter the naming template (use {1}, {2}, etc. for placeholders and {C} for channel): ")
+    stitchtype = input("Stitch Type 'Full' or 'Load': ")
+    overlay  = input("Overlay Image? (Y/N): ")
 
     # Code for naming the XY sequences with your custom naming template defined above
     placeholder_values = {}
@@ -14,8 +17,8 @@ def main():
         xy_name = f"XY{i+1:02}"
         placeholder_values[xy_name] = {}
         for placeholder in range(1, naming_template.count("{") - naming_template.count("{C}") + 1):
-            value = input(f"Enter placeholder {{key{placeholder}}} for {xy_name}: ")
-            placeholder_values[xy_name][f'key{placeholder}'] = value
+            value = input(f"Enter placeholder {{{placeholder}}} for {xy_name}: ")
+            placeholder_values[xy_name][f'{placeholder}'] = value
 
     try:
         main_window.set_focus()
@@ -25,7 +28,7 @@ def main():
         children = run_tree_item.children() # Loop on the XY sequences within the run name defined above
         for child in children:
             xy_name = child.window_text()
-            print(f"Processing child item: {xy_name}")
+            print(f"Processing {xy_name}")
             child.click_input() # Click on the XY sequences
             stitch_button.click_input() # Stitch Button
             
@@ -36,10 +39,7 @@ def main():
                 pyautogui.press('l')
             
             # Check if stitch image is ready
-            if overlay == "Y":
-                file_name_1 = os.path.join(os.path.dirname(__file__), 'overlay.png')
-            elif overlay == "N":
-                file_name_1 = os.path.join(os.path.dirname(__file__), 'nooverlay.png')
+            file_name_1 = os.path.join(os.path.dirname(__file__), 'image.png')
             assert os.path.exists(file_name_1)
             check_for_image(file_name_1)
             time.sleep(0.1)
@@ -87,18 +87,20 @@ def defineChannel(channel_count):
 def check_for_image(image_path):
     # Checks if an image exists on the screen by locating it using the given image path.
     start_time = time.time()
+    print(image_path)
     while True:
         try:
-            location = pyautogui.locateOnScreen(image_path, grayscale=True, confidence=0.99)
+            location = pyautogui.locateOnScreen(image_path, grayscale = True, confidence = 0.9)
             if location is not None:
                 print("Found image!")
                 pyautogui.click(location)
                 return False
         except Exception:
+            print("Time elapsed: ", round(time.time() - start_time, 0), " s")
             time.sleep(2)
-        if time.time() - start_time > 5 * 60:  # 5 minutes
-            print("Image not found after 5 minutes... terminating search.")
-            return False
+            if time.time() - start_time > 5 * 60:  # 5 minutes
+                print("Image not found after 5 minutes... terminating search.")
+                sys.exit()
         
 def name_files(naming_template, placeholder_values, xy_name, delay):
     # Filter windows with titles matching Wide Image Viewer
@@ -148,9 +150,6 @@ stitch_button = app.window(title="BZ-X800 Analyzer").child_window(title="Stitch"
 # Setting up the Channel Orders
 channel_orders_list = defineChannel(int(input("How many channels were imaged? ")))
 print("Channel Orders:", channel_orders_list)
-
-stitchtype = input("Stitch Type 'Full' or 'Load': ")
-overlay  = input("Overlay Image? (Y/N): ")
 
 # Run the main function
 main()
