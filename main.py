@@ -7,7 +7,7 @@ import sys
 def main():
     run_name = input("Enter Run Name: ")
     xy_count = int(input("Enter the number of XY sequences: "))
-    naming_template = input("Enter the naming template (use {1}, {2}, etc. for placeholders and {C} for channel): ")
+    naming_template = input("Enter the naming template (use {key1}, {key2}, etc. for placeholders and {C} for channel): ")
     stitchtype = input("Stitch Type 'Full' or 'Load': ")
     overlay  = input("Overlay Image? (Y/N): ")
 
@@ -17,8 +17,8 @@ def main():
         xy_name = f"XY{i+1:02}"
         placeholder_values[xy_name] = {}
         for placeholder in range(1, naming_template.count("{") - naming_template.count("{C}") + 1):
-            value = input(f"Enter placeholder {{{placeholder}}} for {xy_name}: ")
-            placeholder_values[xy_name][f'{placeholder}'] = value
+            value = input(f"Enter placeholder {{key{placeholder}}} for {xy_name}: ")
+            placeholder_values[xy_name][f'key{placeholder}'] = value
 
     try:
         main_window.set_focus()
