@@ -13,10 +13,12 @@ def main():
 
     # Code for naming the XY sequences with your custom naming template defined above
     placeholder_values = {}
-    for i in range(xy_count):
-        xy_name = f"XY{i+1:02}"
-        placeholder_values[xy_name] = {}
-        for placeholder in range(1, naming_template.count("{") - naming_template.count("{C}") + 1):
+    xy_names = [f"XY{i+1:02}" for i in range(xy_count)]
+
+    for placeholder in range(1, naming_template.count("{") - naming_template.count("{C}") + 1):
+        for xy_name in xy_names:
+            if xy_name not in placeholder_values:
+                placeholder_values[xy_name] = {}
             value = input(f"Enter placeholder {{key{placeholder}}} for {xy_name}: ")
             placeholder_values[xy_name][f'key{placeholder}'] = value
 
@@ -124,6 +126,10 @@ def name_files(naming_template, placeholder_values, xy_name, delay):
         pyautogui.press('enter')
         pyautogui.press('tab', presses=1)
         pyautogui.press('enter')
+        
+        # Allow user to change file save path on the first export
+        if i == 0:
+            input("Change your file save path, then press Enter to continue...")
         
         # Naming Code
         channel = channel_orders_list[i]
