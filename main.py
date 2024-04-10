@@ -54,6 +54,7 @@ def main():
             elif overlay == "N":
                 pyautogui.press('tab', presses=2)
             pyautogui.press('enter')
+            time.sleep(1)
 
             start_time = time.time()
             while True:
@@ -100,8 +101,8 @@ def check_for_image(image_path):
         except Exception:
             print("Time elapsed: ", round(time.time() - start_time, 0), " s")
             time.sleep(2)
-            if time.time() - start_time > 5 * 60:  # 5 minutes
-                print("Image not found after 5 minutes... terminating search.")
+            if time.time() - start_time > 10 * 60:  # 5 minutes
+                print("Image not found after 10 minutes... terminating search.")
                 sys.exit()
         
 def name_files(naming_template, placeholder_values, xy_name, delay):
