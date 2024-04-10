@@ -44,7 +44,7 @@ def main():
             file_name_1 = os.path.join(os.path.dirname(__file__), 'image.png')
             assert os.path.exists(file_name_1)
             check_for_image(file_name_1)
-            time.sleep(0.1)
+            time.sleep(2)
             
             # Uncompressed + start stitch
             pyautogui.press('tab', presses=6)
@@ -54,7 +54,7 @@ def main():
             elif overlay == "N":
                 pyautogui.press('tab', presses=2)
             pyautogui.press('enter')
-            time.sleep(1)
+            time.sleep(2)
 
             start_time = time.time()
             while True:
@@ -65,6 +65,8 @@ def main():
                 time.sleep(0.1)
             end_time = time.time()
             delay_time = end_time - start_time
+            if delay_time > 60:
+                delay_time = 60
             print("Waiting for", round(delay_time*len(channel_orders_list), 2), "seconds")
             time.sleep(delay_time*len(channel_orders_list))
             
@@ -73,6 +75,7 @@ def main():
             # Click Cancel on Stitch Image
             time.sleep(delay_time)
             pyautogui.press('tab', presses=2)
+            time.sleep(0.1)
             pyautogui.press('enter')
                 
     except Exception as e:
@@ -127,10 +130,6 @@ def name_files(naming_template, placeholder_values, xy_name, delay):
         pyautogui.press('enter')
         pyautogui.press('tab', presses=1)
         pyautogui.press('enter')
-        
-        # Allow user to change file save path on the first export
-        if i == 0:
-            input("Change your file save path, then press Enter to continue...")
         
         # Naming Code
         channel = channel_orders_list[i]
