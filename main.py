@@ -5,6 +5,10 @@ import os
 import sys
 
 def main():
+    # Intro Screen
+    os.system('cls' if os.name == 'nt' else 'clear')
+    display_splash_art()
+    
     # Code for defining the Run Name and Processing Settings
     run_name = input("Enter Run Name: ")
     stitchtype = input("Stitch Type? Full (F) or Load (L): ").upper()
@@ -96,6 +100,8 @@ def main():
                 
     except Exception as e:
         print(f"Failed on running {run_name}. Error: {e}")
+        
+    print("All defined XY sequences have been processed.")
 
 def defineChannel(channel_count):
     channel_orders_list = []
@@ -163,6 +169,19 @@ def name_files(naming_template, placeholder_values, xy_name, delay):
         pyautogui.press('tab', presses=1)
         pyautogui.press('enter')
         print(channel + " image closed.")
+        
+def display_splash_art():
+    splash_art = r"""
+    =======================================
+            Keyence Auto Namer
+    =======================================
+            Created by: Maxx Yung
+            Version: 1.0.0
+            Last Updated: 2024-04-12
+    =======================================
+    """
+    print(splash_art)
+    time.sleep(2)
 
 # Setting up the app to use the UIA backend of BZ-X800 Analyzer and focusing on it
 app = pywinauto.Application(backend="uia").connect(title="BZ-X800 Analyzer")
@@ -176,4 +195,5 @@ channel_orders_list = defineChannel(int(input("How many channels were imaged? ")
 print("Channel Orders:", channel_orders_list)
 
 # Run the main function
-main()
+if __name__ == "__main__":
+    main()
