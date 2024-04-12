@@ -5,16 +5,23 @@ import os
 import sys
 
 def main():
+    # Code for defining the Run Name and Processing Settings
     run_name = input("Enter Run Name: ")
-    xy_count = int(input("Enter the number of XY sequences: "))
+    stitchtype = input("Stitch Type? Full (F) or Load (L): ").upper()
+    overlay  = input("Overlay Image? (Y/N): ").upper()
     naming_template = input("Enter the naming template (use {key1}, {key2}, etc. for placeholders and {C} for channel): ")
-    stitchtype = input("Stitch Type 'Full' or 'Load': ")
-    overlay  = input("Overlay Image? (Y/N): ")
+    
+    # Code for defining the XY sequences to be processed
+    run_tree_item = main_window.child_window(title=run_name, control_type="TreeItem")
+    children = run_tree_item.children() # Count the # of XY sequences within the run name defined above
+    print(f"Number of XY sequences: {len(children)}")
+    start_child = int(input("Enter the starting XY number (1-based): "))
+    end_child = int(input("Enter the ending XY number (1-based): "))
 
     # Code for naming the XY sequences with your custom naming template defined above
     placeholder_values = {}
-    xy_names = [f"XY{i+1:02}" for i in range(xy_count)]
-
+    xy_names = [f"XY{i+1:02}" for i in range(start_child - 1, end_child)]
+    
     for placeholder in range(1, naming_template.count("{") - naming_template.count("{C}") + 1):
         for xy_name in xy_names:
             if xy_name not in placeholder_values:
@@ -24,20 +31,21 @@ def main():
 
     try:
         main_window.set_focus()
-        run_tree_item = main_window.child_window(title=run_name, control_type="TreeItem")
         run_tree_item.expand()
         run_tree_item.click_input() # Click on the run name set above to select it
-        children = run_tree_item.children() # Loop on the XY sequences within the run name defined above
-        for child in children:
+        
+        for i in range(start_child - 1, end_child):
+            child = children[i]
             xy_name = child.window_text()
             print(f"Processing {xy_name}")
             child.click_input() # Click on the XY sequences
             stitch_button.click_input() # Stitch Button
             
-            if stitchtype == "Full":
+            # Select stitch type
+            if stitchtype == "F":
                 pyautogui.press('f')
                 pyautogui.press('enter')
-            elif stitchtype == "Load":
+            elif stitchtype == "L":
                 pyautogui.press('l')
             
             # Check if stitch image is ready
@@ -56,6 +64,7 @@ def main():
             pyautogui.press('enter')
             time.sleep(2)
 
+            # Wait for the first instance of the Wide Image Viewer to open
             start_time = time.time()
             while True:
                 windows = pywinauto.Desktop(backend="win32").windows()
@@ -65,17 +74,24 @@ def main():
                 time.sleep(0.1)
             end_time = time.time()
             delay_time = end_time - start_time
-            if delay_time > 60:
-                delay_time = 60
-            print("Waiting for", round(delay_time*len(channel_orders_list), 2), "seconds")
-            time.sleep(delay_time*len(channel_orders_list))
+            if delay_time > 45:
+                delay_time = 45
+            print("Waiting for", round(delay_time, 2), "seconds")
+            time.sleep(delay_time)
             
+            # Turns off capslock to ensure proper naming case
+            caps_lock_state = pyautogui.isKeyLocked('capslock')
+            if caps_lock_state:
+                pyautogui.press('capslock')
+                print("Caps Lock was on. It has been turned off.")
+            
+            # Begins Naming Process
             name_files(naming_template, placeholder_values, xy_name, delay_time)
             
             # Click Cancel on Stitch Image
             time.sleep(delay_time)
             pyautogui.press('tab', presses=2)
-            time.sleep(0.1)
+            time.sleep(2)
             pyautogui.press('enter')
                 
     except Exception as e:
@@ -91,7 +107,7 @@ def defineChannel(channel_count):
     return channel_orders_list
 
 def check_for_image(image_path):
-    # Checks if an image exists on the screen by locating it using the given image path.
+    # Loop checks if an image exists on the screen by locating it using the given image path.
     start_time = time.time()
     print(image_path)
     while True:
@@ -136,7 +152,9 @@ def name_files(naming_template, placeholder_values, xy_name, delay):
         file_name = naming_template.format(C=channel, **placeholder_values[xy_name])
         print(f"Naming file: {file_name}")
         pyautogui.write(file_name)
+        time.sleep(1)
         pyautogui.press('tab', presses=2)
+        time.sleep(1)
         pyautogui.press('enter')
         
         # Close Image
