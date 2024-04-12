@@ -56,23 +56,27 @@ def process_xy_sequences(run_name, stitchtype, overlay, naming_template, start_c
     run_tree_item.click_input()
 
     for i in range(start_child - 1, end_child):
-        child = run_tree_item.children()[i]
-        xy_name = child.window_text()
-        print(f"Processing {xy_name}")
-        child.click_input()
-        time.sleep(3)
-        stitch_button.click_input()
+        try:
+            child = run_tree_item.children()[i]
+            xy_name = child.window_text()
+            print(f"Processing {xy_name}")
+            child.click_input()
+            time.sleep(15)
+            stitch_button.click_input()
 
-        select_stitch_type(stitchtype)
-        check_for_image(IMAGE_PATH)
+            select_stitch_type(stitchtype)
+            check_for_image(IMAGE_PATH)
 
-        start_stitching(overlay)
-        delay_time = wait_for_wide_image_viewer()
+            start_stitching(overlay)
+            delay_time = wait_for_wide_image_viewer()
 
-        disable_caps_lock()
-        name_files(naming_template, placeholder_values, xy_name, delay_time)
+            disable_caps_lock()
+            name_files(naming_template, placeholder_values, xy_name, delay_time)
 
-        close_stitch_image(delay_time)
+            close_stitch_image(delay_time)
+            
+        except Exception as e:
+            print(f"Failed on running {xy_name}. Error: {e}")
 
 def select_stitch_type(stitchtype):
     if stitchtype == "F":
