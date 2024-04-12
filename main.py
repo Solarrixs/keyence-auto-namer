@@ -195,5 +195,4 @@ channel_orders_list = defineChannel(int(input("How many channels were imaged? ")
 print("Channel Orders:", channel_orders_list)
 
 # Run the main function
-if __name__ == "__main__":
-    main()
+main()

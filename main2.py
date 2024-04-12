@@ -10,7 +10,6 @@ WIDE_IMAGE_VIEWER_TITLE = "BZ-X800 Wide Image Viewer"
 MAX_DELAY_TIME = 45
 
 def main():
-    display_splash_art()
     run_name, stitchtype, overlay, naming_template = get_user_inputs()
     start_child, end_child = get_xy_sequence_range(run_name)
     placeholder_values = get_placeholder_values(naming_template, start_child, end_child)
@@ -61,6 +60,7 @@ def process_xy_sequences(run_name, stitchtype, overlay, naming_template, start_c
         xy_name = child.window_text()
         print(f"Processing {xy_name}")
         child.click_input()
+        time.sleep(3)
         stitch_button.click_input()
 
         select_stitch_type(stitchtype)
@@ -199,13 +199,20 @@ def display_splash_art():
     time.sleep(2)
 
 # Setting up the app and main window
-app = pywinauto.Application(backend="uia").connect(title="BZ-X800 Analyzer")
-main_window = app.window(title="BZ-X800 Analyzer")
-stitch_button = app.window(title="BZ-X800 Analyzer").child_window(title="Stitch", class_name="WindowsForms10.BUTTON.app.0.3553390_r8_ad1")
+while True:
+    try:
+        app = pywinauto.Application(backend="uia").connect(title="BZ-X800 Analyzer")
+        main_window = app.window(title="BZ-X800 Analyzer")
+        stitch_button = app.window(title="BZ-X800 Analyzer").child_window(title="Stitch", class_name="WindowsForms10.BUTTON.app.0.3553390_r8_ad1")
+        break
+    except Exception:
+        print("BZ-X800 Analyzer not found. Please open the application and try again. Press Enter to retry.")
+        input()
 
 # Setting up the Channel Orders
+display_splash_art()
 channel_orders_list = define_channel_orders()
 print("Channel Orders:", channel_orders_list)
 
-if __name__ == "__main__":
-    main()
+# Run Main
+main()
