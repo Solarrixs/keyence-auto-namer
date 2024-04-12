@@ -8,6 +8,7 @@ import sys
 IMAGE_PATH = os.path.join(os.path.dirname(__file__), 'image.png')
 WIDE_IMAGE_VIEWER_TITLE = "BZ-X800 Wide Image Viewer"
 MAX_DELAY_TIME = 45
+failed = []
 
 def main():
     run_name, stitchtype, overlay, naming_template = get_user_inputs()
@@ -19,7 +20,7 @@ def main():
     except Exception as e:
         print(f"Failed on running {run_name}. Error: {e}")
 
-    print("All defined XY sequences have been processed.")
+    print("All XY sequences have been processed except for: ", failed)
 
 def get_user_inputs():
     run_name = input("Enter Run Name: ")
@@ -61,7 +62,7 @@ def process_xy_sequences(run_name, stitchtype, overlay, naming_template, start_c
             xy_name = child.window_text()
             print(f"Processing {xy_name}")
             child.click_input()
-            time.sleep(15)
+            time.sleep(3)
             stitch_button.click_input()
 
             select_stitch_type(stitchtype)
@@ -77,10 +78,12 @@ def process_xy_sequences(run_name, stitchtype, overlay, naming_template, start_c
             
         except Exception as e:
             print(f"Failed on running {xy_name}. Error: {e}")
+            failed.append(xy_name)
 
 def select_stitch_type(stitchtype):
     if stitchtype == "F":
         pyautogui.press('f')
+        time.sleep(2)
         pyautogui.press('enter')
     elif stitchtype == "L":
         pyautogui.press('l')
@@ -207,7 +210,7 @@ while True:
     try:
         app = pywinauto.Application(backend="uia").connect(title="BZ-X800 Analyzer")
         main_window = app.window(title="BZ-X800 Analyzer")
-        stitch_button = app.window(title="BZ-X800 Analyzer").child_window(title="Stitch", class_name="WindowsForms10.BUTTON.app.0.3553390_r8_ad1")
+        stitch_button = app.window(title="BZ-X800 Analyzer").child_window(title="Stitch")
         break
     except Exception:
         print("BZ-X800 Analyzer not found. Please open the application and try again. Press Enter to retry.")
