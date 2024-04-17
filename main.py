@@ -8,17 +8,17 @@ import csv
 # Constants
 IMAGE_PATH = os.path.join(os.path.dirname(__file__), 'image.png')
 WIDE_IMAGE_VIEWER_TITLE = "BZ-X800 Wide Image Viewer"
-MAX_DELAY_TIME = 45
+MAX_DELAY_TIME = 20
 failed = []
 
 def main():
     # Main program sequence
-    run_name, stitchtype, overlay, naming_template = get_user_inputs()
+    run_name, stitchtype, overlay, naming_template, filepath = get_user_inputs()
     start_child, end_child = get_xy_sequence_range(run_name)
     placeholder_values = get_placeholder_values(naming_template, start_child, end_child)
 
     try:
-        process_xy_sequences(run_name, stitchtype, overlay, naming_template, start_child, end_child, placeholder_values)
+        process_xy_sequences(run_name, stitchtype, overlay, naming_template, start_child, end_child, placeholder_values, filepath)
     except Exception as e:
         print(f"Failed on running {run_name}. Error: {e}")
 
@@ -30,7 +30,8 @@ def get_user_inputs():
     stitchtype = input("Stitch Type? Full (F) or Load (L): ").upper()
     overlay = input("Overlay Image? (Y/N): ").upper()
     naming_template = input("Enter the naming template (use {key1}, {key2}, etc. for placeholders and {C} for channel): ")
-    return run_name, stitchtype, overlay, naming_template
+    filepath = input("Enter the EXACT filepath to save the images. Press ENTER if you want to use the previous filepath loaded by Keyence: ")
+    return run_name, stitchtype, overlay, naming_template, filepath
 
 def get_xy_sequence_range(run_name):
     # Get XY sequence range from user to process specific XY sequences
@@ -55,7 +56,7 @@ def get_placeholder_values(naming_template, start_child, end_child):
 
     return placeholder_values
 
-def process_xy_sequences(run_name, stitchtype, overlay, naming_template, start_child, end_child, placeholder_values):
+def process_xy_sequences(run_name, stitchtype, overlay, naming_template, start_child, end_child, placeholder_values, filepath):
     main_window.set_focus()
     run_tree_item = main_window.child_window(title=run_name, control_type="TreeItem")
     run_tree_item.expand()
@@ -67,17 +68,20 @@ def process_xy_sequences(run_name, stitchtype, overlay, naming_template, start_c
             xy_name = child.window_text()
             print(f"Processing {xy_name}")
             child.click_input()
-            time.sleep(3) # Optional wait... need to develop a more robust solution
             stitch_button.click_input()
 
             select_stitch_type(stitchtype)
             check_for_image(IMAGE_PATH)
-
+            time.sleep(2)
             start_stitching(overlay)
+            
             delay_time = wait_for_wide_image_viewer()
-
+            process_delay_time = delay_time*(len(channel_orders_list)+0.75)
+            print(f"Waiting for {process_delay_time:.2f} seconds")
+            time.sleep(process_delay_time)
+            
             disable_caps_lock() # Ensure that Caps Lock is off for proper naming at the end
-            name_files(naming_template, placeholder_values, xy_name, delay_time)
+            name_files(naming_template, placeholder_values, xy_name, delay_time, filepath)
 
             close_stitch_image(delay_time)
             
@@ -89,7 +93,6 @@ def select_stitch_type(stitchtype):
     # Full Focus
     if stitchtype == "F":
         pyautogui.press('f')
-        time.sleep(2)
         pyautogui.press('enter')
     # Load
     elif stitchtype == "L":
@@ -101,13 +104,13 @@ def check_for_image(image_path):
     print(image_path)
     while True:
         try:
-            location = pyautogui.locateOnScreen(image_path, grayscale=True, confidence=0.9)
+            location = pyautogui.locateOnScreen(image_path, grayscale=True, confidence=0.99)
             if location is not None:
-                print("Found image!")
                 pyautogui.click(location)
+                print("Found image!")
                 return
         except Exception:
-            print("Time elapsed: ", round(time.time() - start_time, 0), " s")
+            print("Time elapsed:", round(time.time() - start_time, 0), "s")
             time.sleep(2)
             if time.time() - start_time > 10 * 60:  # 10 minutes
                 print("Image not found after 10 minutes... terminating search.")
@@ -121,7 +124,6 @@ def start_stitching(overlay):
     elif overlay == "N":
         pyautogui.press('tab', presses=2)
     pyautogui.press('enter')
-    time.sleep(2)
 
 def wait_for_wide_image_viewer():
     # Adds necessary estimated delay to acount for loading times
@@ -133,16 +135,17 @@ def wait_for_wide_image_viewer():
             break
         time.sleep(0.1)
     delay_time = min(time.time() - start_time, MAX_DELAY_TIME)
-    print(f"Waiting for {delay_time:.2f} seconds")
-    time.sleep(delay_time)
     return delay_time
 
 def disable_caps_lock():
-    if pyautogui.isKeyLocked('capslock'):
+    import ctypes
+    hllDll = ctypes.WinDLL ("User32.dll")
+    VK_CAPITAL = 0x14
+    if hllDll.GetKeyState(VK_CAPITAL):
         pyautogui.press('capslock')
-        print("Caps Lock was on. It has been turned off.")
+        print("Caps Lock disabled.")
 
-def name_files(naming_template, placeholder_values, xy_name, delay):
+def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
     windows = pywinauto.Desktop(backend="win32").windows()
     matching_windows = [win for win in windows if WIDE_IMAGE_VIEWER_TITLE in win.window_text()]
 
@@ -152,10 +155,19 @@ def name_files(naming_template, placeholder_values, xy_name, delay):
 
         click_file_button(last_window)
         export_in_original_scale()
+        
+        if i == 0 and filepath != "":
+            pyautogui.press('tab', presses=6)
+            pyautogui.press('enter')
+            pyautogui.write(filepath)
+            pyautogui.press('enter')
+            pyautogui.press('tab', presses=6)
+            print(f"Filepath set to: {filepath}")
 
         channel = channel_orders_list[i]
         file_name = naming_template.format(C=channel, **placeholder_values[xy_name])
         print(f"Naming file: {file_name}")
+        time.sleep(1)
         pyautogui.write(file_name)
         time.sleep(1)
         pyautogui.press('tab', presses=2)
