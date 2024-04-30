@@ -7,6 +7,7 @@ import csv
 
 # Constants
 IMAGE_PATH = os.path.join(os.path.dirname(__file__), 'image.png')
+IMAGE_PATH_2 = os.path.join(os.path.dirname(__file__), 'image2.png')
 WIDE_IMAGE_VIEWER_TITLE = "BZ-X800 Wide Image Viewer"
 MAX_DELAY_TIME = 20
 
@@ -21,7 +22,10 @@ def main():
     except Exception as e:
         print(f"Failed on running {run_name}. Error: {e}. Moving on to the next run.")
 
-    print("All XY sequences have been processed except for: ", failed)
+    if failed != []:
+        print("All XY sequences have been processed except for: ", failed)
+    else:
+        print("All XY sequences have been processed successfully!")
 
 def get_user_inputs():
     run_name = input("Enter Run Name: ")
@@ -34,9 +38,9 @@ def get_user_inputs():
 def get_xy_sequence_range(run_name):
     run_tree_item = main_window.child_window(title=run_name, control_type="TreeItem")
     children = run_tree_item.children()
-    print(f"Number of XY sequences: {len(children)}")
-    start_child = int(input("Enter the starting XY number (1-based): "))
-    end_child = int(input("Enter the ending XY number (1-based): "))
+    print(f"Detected {len(children)} XY sequences.")
+    start_child = int(input("Enter the starting XY number: "))
+    end_child = int(input("Enter the ending XY number: "))
     return start_child, end_child
 
 def get_placeholder_values(naming_template, start_child, end_child):
@@ -65,9 +69,18 @@ def process_xy_sequences(failed, run_name, stitchtype, overlay, naming_template,
             print(f"Processing {xy_name}")
             child.click_input()
             stitch_button.click_input()
+            
+            if overlay == "N":
+                assert os.path.exists(IMAGE_PATH_2)
+                try:
+                    location = pyautogui.locateOnScreen(IMAGE_PATH_2, grayscale=True, confidence=0.98)
+                    if location is not None:
+                        pyautogui.click(location)
+                finally:
+                    print("Disabled Overlay!")
 
             select_stitch_type(stitchtype)
-            check_for_image(IMAGE_PATH)
+            check_for_image()
             time.sleep(2)
             start_stitching(overlay)
             
@@ -94,13 +107,13 @@ def select_stitch_type(stitchtype):
     elif stitchtype == "L":
         pyautogui.press('l')
 
-def check_for_image(image_path):
-    assert os.path.exists(image_path)
+def check_for_image():
+    assert os.path.exists(IMAGE_PATH)
     start_time = time.time()
-    print(image_path)
+    print(IMAGE_PATH)
     while True:
         try:
-            location = pyautogui.locateOnScreen(image_path, grayscale=True, confidence=0.99)
+            location = pyautogui.locateOnScreen(IMAGE_PATH, grayscale=True, confidence=0.95)
             if location is not None:
                 pyautogui.click(location)
                 print("Found image!")
