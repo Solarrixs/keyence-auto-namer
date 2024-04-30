@@ -9,23 +9,21 @@ import csv
 IMAGE_PATH = os.path.join(os.path.dirname(__file__), 'image.png')
 WIDE_IMAGE_VIEWER_TITLE = "BZ-X800 Wide Image Viewer"
 MAX_DELAY_TIME = 20
-failed = []
 
 def main():
-    # Main program sequence
     run_name, stitchtype, overlay, naming_template, filepath = get_user_inputs()
     start_child, end_child = get_xy_sequence_range(run_name)
     placeholder_values = get_placeholder_values(naming_template, start_child, end_child)
+    failed = []
 
     try:
-        process_xy_sequences(run_name, stitchtype, overlay, naming_template, start_child, end_child, placeholder_values, filepath)
+        process_xy_sequences(failed, run_name, stitchtype, overlay, naming_template, start_child, end_child, placeholder_values, filepath)
     except Exception as e:
-        print(f"Failed on running {run_name}. Error: {e}")
+        print(f"Failed on running {run_name}. Error: {e}. Moving on to the next run.")
 
     print("All XY sequences have been processed except for: ", failed)
 
 def get_user_inputs():
-    # Setup for user inputs
     run_name = input("Enter Run Name: ")
     stitchtype = input("Stitch Type? Full (F) or Load (L): ").upper()
     overlay = input("Overlay Image? (Y/N): ").upper()
@@ -34,7 +32,6 @@ def get_user_inputs():
     return run_name, stitchtype, overlay, naming_template, filepath
 
 def get_xy_sequence_range(run_name):
-    # Get XY sequence range from user to process specific XY sequences
     run_tree_item = main_window.child_window(title=run_name, control_type="TreeItem")
     children = run_tree_item.children()
     print(f"Number of XY sequences: {len(children)}")
@@ -43,9 +40,8 @@ def get_xy_sequence_range(run_name):
     return start_child, end_child
 
 def get_placeholder_values(naming_template, start_child, end_child):
-    # Get placeholder values from user: CSV input to be coded in a future version
     placeholder_values = {}
-    xy_names = [f"XY{i+1:02}" for i in range(start_child - 1, end_child)] # Uses the XY Sequence Range
+    xy_names = [f"XY{i+1:02}" for i in range(start_child - 1, end_child)]
 
     for placeholder in range(1, naming_template.count("{") - naming_template.count("{C}") + 1):
         for xy_name in xy_names:
@@ -56,13 +52,13 @@ def get_placeholder_values(naming_template, start_child, end_child):
 
     return placeholder_values
 
-def process_xy_sequences(run_name, stitchtype, overlay, naming_template, start_child, end_child, placeholder_values, filepath):
+def process_xy_sequences(failed, run_name, stitchtype, overlay, naming_template, start_child, end_child, placeholder_values, filepath):
     main_window.set_focus()
     run_tree_item = main_window.child_window(title=run_name, control_type="TreeItem")
     run_tree_item.expand()
-    run_tree_item.click_input() # Expands the Run Tree Folder
+    run_tree_item.click_input()
 
-    for i in range(start_child - 1, end_child): # Process through specified XY sequence
+    for i in range(start_child - 1, end_child):
         try:
             child = run_tree_item.children()[i]
             xy_name = child.window_text()
@@ -80,7 +76,7 @@ def process_xy_sequences(run_name, stitchtype, overlay, naming_template, start_c
             print(f"Waiting for {process_delay_time:.2f} seconds")
             time.sleep(process_delay_time)
             
-            disable_caps_lock() # Ensure that Caps Lock is off for proper naming at the end
+            disable_caps_lock()
             name_files(naming_template, placeholder_values, xy_name, delay_time, filepath)
 
             close_stitch_image(delay_time)
@@ -112,7 +108,7 @@ def check_for_image(image_path):
         except Exception:
             print("Time elapsed:", round(time.time() - start_time, 0), "s")
             time.sleep(2)
-            if time.time() - start_time > 10 * 60:  # 10 minutes
+            if time.time() - start_time > 10 * 60:
                 print("Image not found after 10 minutes... terminating search.")
                 sys.exit()
 
@@ -126,7 +122,6 @@ def start_stitching(overlay):
     pyautogui.press('enter')
 
 def wait_for_wide_image_viewer():
-    # Adds necessary estimated delay to acount for loading times
     start_time = time.time()
     while True:
         windows = pywinauto.Desktop(backend="win32").windows()
@@ -229,9 +224,9 @@ def display_splash_art():
     =======================================
     """
     print(splash_art)
-    time.sleep(2)
+    time.sleep(0.5)
 
-# Setting up the app and main window
+# Initial setup
 while True:
     try:
         app = pywinauto.Application(backend="uia").connect(title="BZ-X800 Analyzer")
@@ -242,10 +237,9 @@ while True:
         print("BZ-X800 Analyzer not found. Please open the application and try again. Press Enter to retry.")
         input()
 
-# Setting up the Channel Orders
 display_splash_art()
 channel_orders_list = define_channel_orders()
 print("Channel Orders:", channel_orders_list)
 
-# Run Main
+# Run Program
 main()
