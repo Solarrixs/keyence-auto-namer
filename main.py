@@ -1,258 +1,102 @@
-import pywinauto
-import pyautogui
-import time
 import os
-import sys
-import csv
+from config import Config
+from keyence_analyzer import KeyenceAnalyzer
+from wide_image_viewer import WideImageViewer
 
-# Constants
-IMAGE_PATH = os.path.join(os.path.dirname(__file__), 'image.png')
-IMAGE_PATH_2 = os.path.join(os.path.dirname(__file__), 'image2.png')
-WIDE_IMAGE_VIEWER_TITLE = "BZ-X800 Wide Image Viewer"
-MAX_DELAY_TIME = 20
+class Main:
+    def __init__(self):
+        """
+        Initializes the Main class by creating instances of the KeyenceAnalyzer and WideImageViewer classes.
+        """
+        self.keyence_analyzer = KeyenceAnalyzer()
+        self.wide_image_viewer = WideImageViewer()
+
+    def run(self):
+        """
+        Runs the main function of the program. Retrieves core configuration settings by using the `get_config` method of the `self` object.
+        """
+        config = self.get_config() # Gets the core configuration settings
+        start_child, end_child = self.get_xy_sequence_range(config.run_name) # Gets the XY sequence range
+        placeholder_values = self.get_placeholder_values(config.naming_template, start_child, end_child) # Gets the placeholder values for each XY sequence
+        channel_orders_list = self.define_channel_orders() # Gets the channel orders
+
+        self.keyence_analyzer.process_xy_sequences(config, start_child, end_child, placeholder_values, channel_orders_list, self.wide_image_viewer) # Processes the XY sequences through the KeyenceAnalyzer class
+
+    def get_config(self):
+        """
+        Retrieves core configuration settings by prompting the user for input.
+        """
+        run_name = input("Enter Run Name: ") # Gets the run name to be processed. Version 3 will contain a GUI to select multiple runs
+        stitchtype = input("Stitch Type? Full (F) or Load (L): ").upper()
+        overlay = input("Overlay Image? (Y/N): ").upper() # Determines if the overlay image should be used and changes the stitch type accordingly
+        naming_template = input("Enter the naming template (use {key1}, {key2}, etc. for placeholders and {C} for channel): ")
+        filepath = input("Enter the EXACT filepath to save the images. Press ENTER if you want to use the previous filepath loaded by Keyence: ")
+        image_path = os.path.join(os.path.dirname(__file__), 'image.png') # Used by KeyenceAnalyzer to determine whether to begin the stitching process
+        image_path_2 = os.path.join(os.path.dirname(__file__), 'image2.png') # Used by KeyenceAnalyzer to locate the overlay button during the stitching process
+        max_delay_time = 20
+
+        return Config(run_name, stitchtype, overlay, naming_template, filepath, image_path, image_path_2, max_delay_time)
+
+    def get_xy_sequence_range(self, run_name):
+        """
+        Retrieves the range of XY sequences for a given run name.
+
+        Parameters:
+            run_name (str): The name of the run.
+
+        Returns:
+            tuple: A tuple containing the starting and ending XY numbers.
+        """
+        run_tree_item = self.keyence_analyzer.main_window.child_window(title=run_name, control_type="TreeItem")
+        children = run_tree_item.children() # Reads the XY sequences from the run
+        print(f"Detected {len(children)} XY sequences.")
+        start_child = int(input("Enter the starting XY number to be processed: "))
+        end_child = int(input("Enter the ending XY number to be processed: "))
+        return start_child, end_child
+
+    def get_placeholder_values(self, naming_template, start_child, end_child):
+        """
+        Get placeholder values for each XY sequence based on the naming template.
+
+        Parameters:
+            naming_template (str): The naming template for the file names.
+            start_child (int): The starting XY sequence number.
+            end_child (int): The ending XY sequence number.
+
+        Returns:
+            dict: A dictionary containing placeholder values for each XY sequence. The keys are the XY names and the values are dictionaries containing the placeholder values.
+        """
+        placeholder_values = {}
+        xy_names = [f"XY{i+1:02}" for i in range(start_child - 1, end_child)]
+
+        for placeholder in range(1, naming_template.count("{") - naming_template.count("{C}") + 1):
+            for xy_name in xy_names:
+                if xy_name not in placeholder_values:
+                    placeholder_values[xy_name] = {}
+                value = input(f"Enter placeholder {{key{placeholder}}} for {xy_name}: ")
+                placeholder_values[xy_name][f'key{placeholder}'] = value
+
+        return placeholder_values
+
+    def define_channel_orders(self):
+        """
+        Defines the order of the channels that were imaged.
+        
+        Returns:
+            channel_orders_list (list): A list containing the order of the channels that were imaged.
+        """
+        channel_count = int(input("How many channels were imaged? "))
+        channel_orders_list = []
+        print(f"Enter the channel name type of the {channel_count} channels from opened first to opened last. The last one should be Overlay.")
+        for i in range(channel_count):
+            order = input(f"Channel {i+1} of {channel_count}: ")
+            channel_orders_list.append(order)
+        channel_orders_list.reverse()
+        return channel_orders_list
 
 def main():
-    run_name, stitchtype, overlay, naming_template, filepath = get_user_inputs()
-    start_child, end_child = get_xy_sequence_range(run_name)
-    placeholder_values = get_placeholder_values(naming_template, start_child, end_child)
-    failed = []
+    main_instance = Main()
+    main_instance.run()
 
-    try:
-        process_xy_sequences(failed, run_name, stitchtype, overlay, naming_template, start_child, end_child, placeholder_values, filepath)
-    except Exception as e:
-        print(f"Failed on running {run_name}. Error: {e}. Moving on to the next run.")
-
-    if failed != []:
-        print("All XY sequences have been processed except for: ", failed)
-    else:
-        print("All XY sequences have been processed successfully!")
-
-def get_user_inputs():
-    run_name = input("Enter Run Name: ")
-    stitchtype = input("Stitch Type? Full (F) or Load (L): ").upper()
-    overlay = input("Overlay Image? (Y/N): ").upper()
-    naming_template = input("Enter the naming template (use {key1}, {key2}, etc. for placeholders and {C} for channel): ")
-    filepath = input("Enter the EXACT filepath to save the images. Press ENTER if you want to use the previous filepath loaded by Keyence: ")
-    return run_name, stitchtype, overlay, naming_template, filepath
-
-def get_xy_sequence_range(run_name):
-    run_tree_item = main_window.child_window(title=run_name, control_type="TreeItem")
-    children = run_tree_item.children()
-    print(f"Detected {len(children)} XY sequences.")
-    start_child = int(input("Enter the starting XY number: "))
-    end_child = int(input("Enter the ending XY number: "))
-    return start_child, end_child
-
-def get_placeholder_values(naming_template, start_child, end_child):
-    placeholder_values = {}
-    xy_names = [f"XY{i+1:02}" for i in range(start_child - 1, end_child)]
-
-    for placeholder in range(1, naming_template.count("{") - naming_template.count("{C}") + 1):
-        for xy_name in xy_names:
-            if xy_name not in placeholder_values:
-                placeholder_values[xy_name] = {}
-            value = input(f"Enter placeholder {{key{placeholder}}} for {xy_name}: ")
-            placeholder_values[xy_name][f'key{placeholder}'] = value
-
-    return placeholder_values
-
-def process_xy_sequences(failed, run_name, stitchtype, overlay, naming_template, start_child, end_child, placeholder_values, filepath):
-    main_window.set_focus()
-    run_tree_item = main_window.child_window(title=run_name, control_type="TreeItem")
-    run_tree_item.expand()
-    run_tree_item.click_input()
-
-    for i in range(start_child - 1, end_child):
-        try:
-            child = run_tree_item.children()[i]
-            xy_name = child.window_text()
-            print(f"Processing {xy_name}")
-            child.click_input()
-            stitch_button.click_input()
-            
-            if overlay == "N":
-                assert os.path.exists(IMAGE_PATH_2)
-                try:
-                    location = pyautogui.locateOnScreen(IMAGE_PATH_2, grayscale=True, confidence=0.98)
-                    if location is not None:
-                        pyautogui.click(location)
-                finally:
-                    print("Disabled Overlay!")
-
-            select_stitch_type(stitchtype)
-            check_for_image()
-            time.sleep(2)
-            start_stitching(overlay)
-            
-            delay_time = wait_for_wide_image_viewer()
-            process_delay_time = delay_time*(len(channel_orders_list)+0.75)
-            print(f"Waiting for {process_delay_time:.2f} seconds")
-            time.sleep(process_delay_time)
-            
-            disable_caps_lock()
-            name_files(naming_template, placeholder_values, xy_name, delay_time, filepath)
-
-            close_stitch_image(delay_time)
-            
-        except Exception as e:
-            print(f"Failed on running {xy_name}. Error: {e}")
-            failed.append(xy_name)
-
-def select_stitch_type(stitchtype):
-    # Full Focus
-    if stitchtype == "F":
-        pyautogui.press('f')
-        pyautogui.press('enter')
-    # Load
-    elif stitchtype == "L":
-        pyautogui.press('l')
-
-def check_for_image():
-    assert os.path.exists(IMAGE_PATH)
-    start_time = time.time()
-    print(IMAGE_PATH)
-    while True:
-        try:
-            location = pyautogui.locateOnScreen(IMAGE_PATH, grayscale=True, confidence=0.95)
-            if location is not None:
-                pyautogui.click(location)
-                print("Found image!")
-                return
-        except Exception:
-            print("Time elapsed:", round(time.time() - start_time, 0), "s")
-            time.sleep(2)
-            if time.time() - start_time > 10 * 60:
-                print("Image not found after 10 minutes... terminating search.")
-                sys.exit()
-
-def start_stitching(overlay):
-    pyautogui.press('tab', presses=6)
-    pyautogui.press('right')
-    if overlay == "Y":
-        pyautogui.press('tab', presses=3)
-    elif overlay == "N":
-        pyautogui.press('tab', presses=2)
-    pyautogui.press('enter')
-
-def wait_for_wide_image_viewer():
-    start_time = time.time()
-    while True:
-        windows = pywinauto.Desktop(backend="win32").windows()
-        matching_windows = [win for win in windows if WIDE_IMAGE_VIEWER_TITLE in win.window_text()]
-        if matching_windows:
-            break
-        time.sleep(0.1)
-    delay_time = min(time.time() - start_time, MAX_DELAY_TIME)
-    return delay_time
-
-def disable_caps_lock():
-    import ctypes
-    hllDll = ctypes.WinDLL ("User32.dll")
-    VK_CAPITAL = 0x14
-    if hllDll.GetKeyState(VK_CAPITAL):
-        pyautogui.press('capslock')
-        print("Caps Lock disabled.")
-
-def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
-    windows = pywinauto.Desktop(backend="win32").windows()
-    matching_windows = [win for win in windows if WIDE_IMAGE_VIEWER_TITLE in win.window_text()]
-
-    for i in range(len(matching_windows)):
-        last_window = matching_windows[i]
-        last_window.set_focus()
-
-        click_file_button(last_window)
-        export_in_original_scale()
-        
-        if i == 0 and filepath != "":
-            pyautogui.press('tab', presses=6)
-            pyautogui.press('enter')
-            pyautogui.write(filepath)
-            pyautogui.press('enter')
-            pyautogui.press('tab', presses=6)
-            print(f"Filepath set to: {filepath}")
-
-        channel = channel_orders_list[i]
-        file_name = naming_template.format(C=channel, **placeholder_values[xy_name])
-        print(f"Naming file: {file_name}")
-        time.sleep(1)
-        pyautogui.write(file_name)
-        time.sleep(1)
-        pyautogui.press('tab', presses=2)
-        time.sleep(1)
-        pyautogui.press('enter')
-
-        close_image(delay, channel)
-
-def click_file_button(window):
-    app = pywinauto.Application(backend="uia").connect(handle=window.handle)
-    main_window = app.window(auto_id="MainForm", control_type="Window")
-    toolbar = main_window.child_window(title="toolStrip1", control_type="ToolBar")
-    file_button = toolbar.child_window(title="File", control_type="Button")
-    file_button.click_input()
-
-def export_in_original_scale():
-    pyautogui.press('tab', presses=4)
-    pyautogui.press('enter')
-    pyautogui.press('tab', presses=1)
-    pyautogui.press('enter')
-
-def close_image(delay, channel):
-    time.sleep(delay)
-    pyautogui.hotkey('alt', 'f4')
-    pyautogui.press('tab', presses=1)
-    pyautogui.press('enter')
-    print(f"{channel} image closed.")
-
-def close_stitch_image(delay):
-    time.sleep(delay)
-    pyautogui.press('tab', presses=2)
-    time.sleep(2)
-    pyautogui.press('enter')
-    
-def read_csv(csv_filepath):
-    with open(csv_filepath, mode='r') as file:
-        reader = csv.reader(file)
-        data = list(reader)
-    return data
-
-def define_channel_orders():
-    channel_count = int(input("How many channels were imaged? "))
-    channel_orders_list = []
-    print(f"Enter the channel name type of the {channel_count} channels from opened first to opened last. The last one should be Overlay.")
-    for i in range(channel_count):
-        order = input(f"Channel {i+1} of {channel_count}: ")
-        channel_orders_list.append(order)
-    channel_orders_list.reverse()
-    return channel_orders_list
-
-def display_splash_art():
-    splash_art = r"""
-    =======================================
-            Keyence Auto Namer
-    =======================================
-            Created by: Maxx Yung
-            Version: 1.0.0
-            Last Updated: 2024-04-12
-    =======================================
-    """
-    print(splash_art)
-    time.sleep(0.5)
-
-# Initial setup
-while True:
-    try:
-        app = pywinauto.Application(backend="uia").connect(title="BZ-X800 Analyzer")
-        main_window = app.window(title="BZ-X800 Analyzer")
-        stitch_button = app.window(title="BZ-X800 Analyzer").child_window(title="Stitch")
-        break
-    except Exception:
-        print("BZ-X800 Analyzer not found. Please open the application and try again. Press Enter to retry.")
-        input()
-
-display_splash_art()
-channel_orders_list = define_channel_orders()
-print("Channel Orders:", channel_orders_list)
-
-# Run Program
-main()
+if __name__ == "__main__":
+    main()
