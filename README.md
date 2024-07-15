@@ -40,38 +40,7 @@ The Automated Keyence Naming Program is a Python script that automates the proce
 
 3. The program will automatically process the image sequences based on the provided information.
 
-4. To bundle the program within a executable file, run: 
-```pyinstaller --noconfirm --onefile --console --clean `
-  --hidden-import "pywinauto" `
-  --hidden-import "pyautogui" `
-  --hidden-import "comtypes" `
-  --hidden-import "comtypes.stream" `
-  --exclude-module "tkinter" `
-  --exclude-module "numpy" `
-  --exclude-module "matplotlib" `
-  --exclude-module "pandas" `
-  --exclude-module "scipy" `
-  --exclude-module "PyQt5" `
-  --exclude-module "nuitka" `
-  --exclude-module "PySide2" `
-  --exclude-module "wx" `
-  --exclude-module "pyglet" `
-  --exclude-module "OpenGL" `
-  --exclude-module "PyCrypto" `
-  --exclude-module "cryptography" `
-  --exclude-module "asyncio" `
-  --exclude-module "sqlite3" `
-  --exclude-module "docutils" `
-  --exclude-module "pydoc" `
-  --exclude-module "unittest" `
-  --exclude-module "distutils" `
-  --exclude-module "setuptools" `
-  --exclude-module "email" `
-  --exclude-module "html" `
-  --exclude-module "http" `
-  --exclude-module "xml" `
-  --exclude-module "pydoc_data" `
-  main.py```
+4. To bundle the program within a executable file, run: `pyinstaller --hidden-import comtypes --hidden-import comtypes.stream -F main.py`
 
 ## Limitations and Future Updates
 

@@ -8,7 +8,6 @@ try:
 except ImportError as e:
     print(f"Error importing required library: {e}")
     print("Please ensure all required libraries are installed.")
-    sys.exit(1)
 
 # Constants
 IMAGE_PATH = os.path.join(os.path.dirname(__file__), 'image.png')
