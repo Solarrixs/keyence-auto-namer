@@ -1,9 +1,14 @@
-import pywinauto
-import pyautogui
-import time
-import os
-import sys
-import csv
+try:
+    import pywinauto
+    import pyautogui
+    import time
+    import os
+    import sys
+    import csv
+except ImportError as e:
+    print(f"Error importing required library: {e}")
+    print("Please ensure all required libraries are installed.")
+    sys.exit(1)
 
 # Constants
 IMAGE_PATH = os.path.join(os.path.dirname(__file__), 'image.png')
@@ -255,4 +260,5 @@ channel_orders_list = define_channel_orders()
 print("Channel Orders:", channel_orders_list)
 
 # Run Program
-main()
+if __name__ == "__main__":
+    main()
