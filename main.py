@@ -237,8 +237,8 @@ def display_splash_art():
             Keyence Auto Namer
     =======================================
             Created by: Maxx Yung
-            Version: 1.0.0
-            Last Updated: 2024-04-12
+            Version: 1.0.2
+            Last Updated: 2024-07-15
     =======================================
     """
     print(splash_art)

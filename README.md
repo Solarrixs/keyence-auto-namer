@@ -38,13 +38,17 @@ The Automated Keyence Naming Program is a Python script that automates the proce
 
 3. The program will automatically process the image sequences based on the provided information.
 
+4. To bundle the program within a executable file, run: `pyinstaller --hidden-import comtypes --hidden-import comtypes.stream -F main.py`
+
 ## Limitations and Future Updates
 
 1. Version 1 currently supports only the Stitch, Full Focus, and Uncompressed workflow. Version 2 will introduce the ability to customize the workflow based on user requirements.
 
 2. Version 1 requires manual input of the file save path and channel order. Version 2 will include a file save path chooser and automatically determine the channel order.
 
-3. Version 2 will include a graphical user interface (GUI) and an executable (.exe) file for ease of use by non-programmers.
+3. Version 1.0.2 allows for an executable (.exe) file to be used instead.
+
+4. Version 2 will include a graphical user interface (GUI).
 
 ## Contributing
 
