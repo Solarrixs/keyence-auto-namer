@@ -16,20 +16,50 @@ WIDE_IMAGE_VIEWER_TITLE = "BZ-X800 Wide Image Viewer"
 MAX_DELAY_TIME = 20
 
 def main():
-    run_name, stitchtype, overlay, naming_template, filepath = get_user_inputs()
-    start_child, end_child = get_xy_sequence_range(run_name)
-    placeholder_values = get_placeholder_values(naming_template, start_child, end_child)
+    run_configs = get_multiple_run_configs()
     failed = []
 
-    try:
-        process_xy_sequences(failed, run_name, stitchtype, overlay, naming_template, start_child, end_child, placeholder_values, filepath)
-    except Exception as e:
-        print(f"Failed on running {run_name}. Error: {e}. Moving on to the next run.")
+    for run_config in run_configs:
+        run_name, stitchtype, overlay, naming_template, filepath, start_child, end_child = run_config
+        placeholder_values = get_placeholder_values(naming_template, start_child, end_child)
 
-    if failed != []:
+        try:
+            process_xy_sequences(failed, run_name, stitchtype, overlay, naming_template, start_child, end_child, placeholder_values, filepath)
+        except Exception as e:
+            print(f"Failed on running {run_name}. Error: {e}. Moving on to the next run.")
+
+    if failed:
         print("All XY sequences have been processed except for: ", failed)
     else:
         print("All XY sequences have been processed successfully!")
+
+def get_multiple_run_configs():
+    run_configs = []
+    while True:
+        run_name = input("Enter Run Name (or press Enter to finish): ")
+        if not run_name:
+            break
+        
+        stitchtype = input("Stitch Type? Full (F) or Load (L): ").upper()
+        overlay = input("Overlay Image? (Y/N): ").upper()
+        naming_template = input("Enter the naming template (use {1}, {2}, etc. for placeholders and {C} for channel): ")
+        filepath = input("Enter the EXACT filepath to save the images. Press ENTER if you want to use the previous filepath loaded by Keyence: ")
+        
+        start_child, end_child = get_xy_sequence_range(run_name)
+        
+        run_configs.append((run_name, stitchtype, overlay, naming_template, filepath, start_child, end_child))
+    
+    return run_configs
+
+def get_xy_sequence_range(run_name):
+    run_tree_item = main_window.child_window(title=run_name, control_type="TreeItem")
+    children = run_tree_item.children()
+    print(f"Detected {len(children)} XY sequences for {run_name}.")
+    start_child = int(input(f"Enter the starting XY number for {run_name}: "))
+    end_child = int(input(f"Enter the ending XY number for {run_name}: "))
+    return start_child, end_child
+
+# The rest of your code remains the same...
 
 def get_user_inputs():
     run_name = input("Enter Run Name: ")
@@ -39,24 +69,17 @@ def get_user_inputs():
     filepath = input("Enter the EXACT filepath to save the images. Press ENTER if you want to use the previous filepath loaded by Keyence: ")
     return run_name, stitchtype, overlay, naming_template, filepath
 
-def get_xy_sequence_range(run_name):
-    run_tree_item = main_window.child_window(title=run_name, control_type="TreeItem")
-    children = run_tree_item.children()
-    print(f"Detected {len(children)} XY sequences.")
-    start_child = int(input("Enter the starting XY number: "))
-    end_child = int(input("Enter the ending XY number: "))
-    return start_child, end_child
-
 def get_placeholder_values(naming_template, start_child, end_child):
     placeholder_values = {}
     xy_names = [f"XY{i+1:02}" for i in range(start_child - 1, end_child)]
 
-    for placeholder in range(1, naming_template.count("{") - naming_template.count("{C}") + 1):
-        for xy_name in xy_names:
-            if xy_name not in placeholder_values:
-                placeholder_values[xy_name] = {}
-            value = input(f"Enter placeholder {{key{placeholder}}} for {xy_name}: ")
-            placeholder_values[xy_name][f'key{placeholder}'] = value
+    placeholder_count = sum(1 for char in naming_template if char == '{') - naming_template.count('{C}')
+
+    for xy_name in xy_names:
+        placeholder_values[xy_name] = {}
+        for placeholder in range(1, placeholder_count + 1):
+            value = input(f"Enter placeholder {{{placeholder}}} for {xy_name}: ")
+            placeholder_values[xy_name][str(placeholder)] = value
 
     return placeholder_values
 
@@ -177,7 +200,7 @@ def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
             print(f"Filepath set to: {filepath}")
 
         channel = channel_orders_list[i]
-        file_name = naming_template.format(C=channel, **placeholder_values[xy_name])
+        file_name = naming_template.format(C=channel, **{k: v for k, v in placeholder_values[xy_name].items()})
         print(f"Naming file: {file_name}")
         time.sleep(1)
         pyautogui.write(file_name)
