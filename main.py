@@ -4,7 +4,6 @@ import pyautogui
 import time
 import os
 import sys
-import re
 
 # Constants
 IMAGE_PATH = os.path.join(os.path.dirname(__file__), 'image.png')
