@@ -89,7 +89,7 @@ def process_xy_sequences(failed, run_name, stitchtype, overlay, naming_template,
             start_stitching(overlay)
             
             delay_time = wait_for_wide_image_viewer()
-            process_delay_time = delay_time*(len(channel_orders_list)+0.75)
+            process_delay_time = delay_time*(len(channel_orders_list))
             print(f"Waiting for {process_delay_time:.2f} seconds")
             time.sleep(process_delay_time)
             
