@@ -11,7 +11,6 @@ except ImportError as e:
 
 # Constants
 IMAGE_PATH = os.path.join(os.path.dirname(__file__), 'image.png')
-IMAGE_PATH_2 = os.path.join(os.path.dirname(__file__), 'image2.png')
 WIDE_IMAGE_VIEWER_TITLE = "BZ-X800 Wide Image Viewer"
 MAX_DELAY_TIME = 20
 
@@ -59,8 +58,6 @@ def get_xy_sequence_range(run_name):
     end_child = int(input(f"Enter the ending XY number for {run_name}: "))
     return start_child, end_child
 
-# The rest of your code remains the same...
-
 def get_user_inputs():
     run_name = input("Enter Run Name: ")
     stitchtype = input("Stitch Type? Full (F) or Load (L): ").upper()
@@ -96,15 +93,6 @@ def process_xy_sequences(failed, run_name, stitchtype, overlay, naming_template,
             print(f"Processing {xy_name}")
             child.click_input()
             stitch_button.click_input()
-            
-            if overlay == "N":
-                assert os.path.exists(IMAGE_PATH_2)
-                try:
-                    location = pyautogui.locateOnScreen(IMAGE_PATH_2, grayscale=True, confidence=0.98)
-                    if location is not None:
-                        pyautogui.click(location)
-                finally:
-                    print("Disabled Overlay!")
 
             select_stitch_type(stitchtype)
             check_for_image()
@@ -196,7 +184,7 @@ def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
             pyautogui.press('enter')
             pyautogui.write(filepath)
             pyautogui.press('enter')
-            pyautogui.press('tab', presses=6)
+            pyautogui.press('tab', presses=6, interval=1)
             print(f"Filepath set to: {filepath}")
 
         channel = channel_orders_list[i]
