@@ -1,13 +1,10 @@
-try:
-    import pywinauto
-    import pyautogui
-    import time
-    import os
-    import sys
-    import csv
-except ImportError as e:
-    print(f"Error importing required library: {e}")
-    print("Please ensure all required libraries are installed.")
+
+import pywinauto
+import pyautogui
+import time
+import os
+import sys
+import re
 
 # Constants
 IMAGE_PATH = os.path.join(os.path.dirname(__file__), 'image.png')
@@ -58,25 +55,17 @@ def get_xy_sequence_range(run_name):
     end_child = int(input(f"Enter the ending XY number for {run_name}: "))
     return start_child, end_child
 
-def get_user_inputs():
-    run_name = input("Enter Run Name: ")
-    stitchtype = input("Stitch Type? Full (F) or Load (L): ").upper()
-    overlay = input("Overlay Image? (Y/N): ").upper()
-    naming_template = input("Enter the naming template (use {key1}, {key2}, etc. for placeholders and {C} for channel): ")
-    filepath = input("Enter the EXACT filepath to save the images. Press ENTER if you want to use the previous filepath loaded by Keyence: ")
-    return run_name, stitchtype, overlay, naming_template, filepath
-
 def get_placeholder_values(naming_template, start_child, end_child):
     placeholder_values = {}
     xy_names = [f"XY{i+1:02}" for i in range(start_child - 1, end_child)]
-
-    placeholder_count = sum(1 for char in naming_template if char == '{') - naming_template.count('{C}')
+    placeholders = set(re.findall(r'\{(\d+)\}', naming_template))
+    placeholders.discard('C')
 
     for xy_name in xy_names:
         placeholder_values[xy_name] = {}
-        for placeholder in range(1, placeholder_count + 1):
+        for placeholder in placeholders:
             value = input(f"Enter placeholder {{{placeholder}}} for {xy_name}: ")
-            placeholder_values[xy_name][str(placeholder)] = value
+            placeholder_values[xy_name][placeholder] = value
 
     return placeholder_values
 
@@ -184,17 +173,17 @@ def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
         if i == 0 and filepath != "":
             print(f"Filepath set to: {filepath}")
             pyautogui.press("tab", presses=6)
+            time.sleep(0.05)
             pyautogui.press("enter")
+            time.sleep(0.05)
             pyautogui.write(filepath)
             pyautogui.press("enter")
-            pyautogui.press("tab", presses=6)
+            time.sleep(0.1)
+            pyautogui.press("tab", presses=6, interval=0.05)
 
         channel = channel_orders_list[i]
-        
         try:
-            # Create a dictionary with all possible placeholders
-            format_dict = {str(k): '' for k in range(1, 10)}  # Assuming max 9 placeholders
-            format_dict.update(placeholder_values.get(xy_name, {}))
+            format_dict = placeholder_values[xy_name].copy()
             format_dict['C'] = channel
 
             file_name = naming_template.format(**format_dict)
@@ -209,10 +198,10 @@ def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
 
         except KeyError as e:
             print(f"Error: Missing placeholder {e} in naming template for {xy_name}")
-            break
+            continue
         except Exception as e:
             print(f"Unexpected error occurred while naming file for {xy_name}: {e}")
-            break
+            continue
 
         close_image(delay, channel)
 
@@ -241,12 +230,6 @@ def close_stitch_image(delay):
     pyautogui.press('tab', presses=2)
     time.sleep(2)
     pyautogui.press('enter')
-    
-def read_csv(csv_filepath):
-    with open(csv_filepath, mode='r') as file:
-        reader = csv.reader(file)
-        data = list(reader)
-    return data
 
 def define_channel_orders():
     channel_count = int(input("How many channels were imaged? "))
