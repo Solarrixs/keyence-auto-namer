@@ -38,7 +38,7 @@ def get_multiple_run_configs():
         
         stitchtype = input("Stitch Type? Full (F) or Load (L): ").upper()
         overlay = input("Overlay Image? (Y/N): ").upper()
-        naming_template = input("Enter the naming template (use {1}, {2}, etc. for placeholders and {C} for channel): ")
+        naming_template = input("Enter the naming template (use {key1}, {key2}, etc. for placeholders and {C} for channel): ")
         filepath = input("Enter the EXACT filepath to save the images. Press ENTER if you want to use the previous filepath loaded by Keyence: ")
         
         start_child, end_child = get_xy_sequence_range(run_name)
@@ -60,13 +60,13 @@ def get_placeholder_values(naming_template, start_child, end_child):
     xy_names = [f"XY{i:02}" for i in range(start_child, end_child + 1)]
 
     # Find all unique placeholders in the naming template
-    placeholders = set(i for i in range(1, 10) if f"{{{i}}}" in naming_template)
+    placeholders = set(i for i in range(1, 10) if f"{{key{i}}}" in naming_template)
 
     for xy_name in xy_names:
         placeholder_values[xy_name] = {}
         for placeholder in placeholders:
-            value = input(f"Enter placeholder {{{placeholder}}} for {xy_name}: ")
-            placeholder_values[xy_name][f'{placeholder}'] = value
+            value = input(f"Enter placeholder {{key{placeholder}}} for {xy_name}: ")
+            placeholder_values[xy_name][f'key{placeholder}'] = value
 
     return placeholder_values
 
@@ -180,7 +180,7 @@ def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
         channel = channel_orders_list[i]
         try:
             # Create a dictionary with all possible placeholders
-            format_dict = {f'{k}': '' for k in range(1, 10)}  # Initialize all placeholders
+            format_dict = {f'key{k}': '' for k in range(1, 10)}  # Initialize all placeholders
             format_dict.update(placeholder_values[xy_name])  # Update with actual values
             format_dict['C'] = channel
 
