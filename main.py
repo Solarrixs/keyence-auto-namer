@@ -57,15 +57,16 @@ def get_xy_sequence_range(run_name):
 
 def get_placeholder_values(naming_template, start_child, end_child):
     placeholder_values = {}
-    xy_names = [f"XY{i+1:02}" for i in range(start_child - 1, end_child)]
-    placeholders = set(re.findall(r'\{(\d+)\}', naming_template))
-    placeholders.discard('C')
+    xy_names = [f"XY{i:02}" for i in range(start_child, end_child + 1)]
+
+    # Find all unique placeholders in the naming template
+    placeholders = set(i for i in range(1, 10) if f"{{{i}}}" in naming_template)
 
     for xy_name in xy_names:
         placeholder_values[xy_name] = {}
         for placeholder in placeholders:
             value = input(f"Enter placeholder {{{placeholder}}} for {xy_name}: ")
-            placeholder_values[xy_name][placeholder] = value
+            placeholder_values[xy_name][f'{placeholder}'] = value
 
     return placeholder_values
 
@@ -159,9 +160,7 @@ def disable_caps_lock():
 
 def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
     windows = pywinauto.Desktop(backend="win32").windows()
-    matching_windows = [
-        win for win in windows if WIDE_IMAGE_VIEWER_TITLE in win.window_text()
-    ]
+    matching_windows = [win for win in windows if WIDE_IMAGE_VIEWER_TITLE in win.window_text()]
 
     for i in range(len(matching_windows)):
         last_window = matching_windows[i]
@@ -169,39 +168,34 @@ def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
 
         click_file_button(last_window)
         export_in_original_scale()
-
+        
         if i == 0 and filepath != "":
-            print(f"Filepath set to: {filepath}")
-            pyautogui.press("tab", presses=6)
-            time.sleep(0.05)
-            pyautogui.press("enter")
-            time.sleep(0.05)
+            pyautogui.press('tab', presses=6)
+            pyautogui.press('enter')
             pyautogui.write(filepath)
-            pyautogui.press("enter")
-            time.sleep(0.1)
-            pyautogui.press("tab", presses=6, interval=0.05)
+            pyautogui.press('enter')
+            pyautogui.press('tab', presses=6)
+            print(f"Filepath set to: {filepath}")
 
         channel = channel_orders_list[i]
         try:
-            format_dict = placeholder_values[xy_name].copy()
+            # Create a dictionary with all possible placeholders
+            format_dict = {f'{k}': '' for k in range(1, 10)}  # Initialize all placeholders
+            format_dict.update(placeholder_values[xy_name])  # Update with actual values
             format_dict['C'] = channel
 
             file_name = naming_template.format(**format_dict)
             print(f"Naming file: {file_name}")
-
             time.sleep(1)
             pyautogui.write(file_name)
             time.sleep(1)
-            pyautogui.press("tab", presses=2)
+            pyautogui.press('tab', presses=2)
             time.sleep(1)
-            pyautogui.press("enter")
-
+            pyautogui.press('enter')
         except KeyError as e:
             print(f"Error: Missing placeholder {e} in naming template for {xy_name}")
-            continue
         except Exception as e:
             print(f"Unexpected error occurred while naming file for {xy_name}: {e}")
-            continue
 
         close_image(delay, channel)
 
