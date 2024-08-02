@@ -24,7 +24,7 @@ def main():
 
     if failed:
         print("All XY sequences have been processed except for: ", failed)
-    else:
+    else:   
         print("All XY sequences have been processed successfully!")
 
 def get_multiple_run_configs():
@@ -84,18 +84,24 @@ def process_xy_sequences(failed, run_name, stitchtype, overlay, naming_template,
 
             select_stitch_type(stitchtype)
             check_for_image()
-            time.sleep(2)
+            
+            image_stitch = app.window(title="BZ-X800 Analyzer").child_window(auto_id="ImageJointMainForm", class_name="WindowsForms10.Window.8.app.0.3553390_r8_ad1", title = "Image Stitch")
+            
+            close_button = image_stitch.child_window(auto_id="_buttonCancel", title = "Cancel", class_name="WindowsForms10.BUTTON.app.0.3553390_r8_ad1")
+            
+            image_stitch.set_focus()
             start_stitching(overlay)
             
             delay_time = wait_for_wide_image_viewer()
-            process_delay_time = delay_time*(len(channel_orders_list))
+            process_delay_time = delay_time*(len(channel_orders_list)-0.7)
             print(f"Waiting for {process_delay_time:.2f} seconds")
-            time.sleep(process_delay_time)
-            
+            time.sleep(process_delay_time) # ! Arbitary value. Figure out a way to prevent this hardcoded result.
             disable_caps_lock()
             name_files(naming_template, placeholder_values, xy_name, delay_time, filepath)
-
-            close_stitch_image(delay_time)
+            
+            image_stitch.set_focus()
+            close_button.click_input()
+            print("Closing stitch image...")
             
         except Exception as e:
             print(f"Failed on running {xy_name}. Error: {e}")
@@ -184,11 +190,9 @@ def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
 
             file_name = naming_template.format(**format_dict)
             print(f"Naming file: {file_name}")
-            time.sleep(1)
+            time.sleep(1)  # ! Arbitary value. Figure out a way to prevent this hardcoded result.
             pyautogui.write(file_name)
-            time.sleep(1)
             pyautogui.press('tab', presses=2)
-            time.sleep(1)
             pyautogui.press('enter')
         except KeyError as e:
             print(f"Error: Missing placeholder {e} in naming template for {xy_name}")
@@ -211,17 +215,18 @@ def export_in_original_scale():
     pyautogui.press('enter')
 
 def close_image(delay, channel):
-    time.sleep(delay)
+    time.sleep(delay/3) # ! Arbitary value. Figure out a way to prevent this hardcoded result.
     pyautogui.hotkey('alt', 'f4')
+    time.sleep(0.1)
     pyautogui.press('tab', presses=1)
+    time.sleep(0.1)
     pyautogui.press('enter')
     print(f"{channel} image closed.")
 
-def close_stitch_image(delay):
-    time.sleep(delay)
+def close_stitch_image():
     pyautogui.press('tab', presses=2)
-    time.sleep(2)
     pyautogui.press('enter')
+    time.sleep(1) # ! Arbitary value. Figure out a way to prevent this hardcoded result.
 
 def define_channel_orders():
     channel_count = int(input("How many channels were imaged? "))
@@ -240,7 +245,7 @@ def display_splash_art():
     =======================================
             Created by: Maxx Yung
             Version: 1.0.2
-            Last Updated: 2024-07-15
+            Last Updated: 2024-08-01
     =======================================
     """
     print(splash_art)
