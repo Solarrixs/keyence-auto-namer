@@ -1,13 +1,11 @@
-import pywinauto
 import pyautogui
 import time
 import os
 import sys
 import logging
 import csv
-from tqdm import tqdm
 from pywinauto.application import Application
-from pywinauto import Desktop, timings
+from pywinauto import Desktop
 from pywinauto.keyboard import send_keys
 
 # Constants
@@ -44,35 +42,27 @@ def main():
         logging.error("CSV Validation Errors:")
         for error in validation_errors:
             logging.error(error)
-            print(error)
         return
 
     run_configs, placeholder_values = read_csv_config(csv_file_path)
 
     failed = []
 
-    total_runs = len(run_configs)
-    with tqdm(total=total_runs, desc="Overall Progress", unit="run") as pbar:
-        for run_config in run_configs:
-            run_name, stitchtype, overlay, naming_template, filepath, start_child, end_child = run_config
+    for run_config in run_configs:
+        run_name, stitchtype, overlay, naming_template, filepath, start_child, end_child = run_config
 
-            try:
-                process_xy_sequences(failed, run_name, stitchtype, overlay, naming_template, start_child, end_child, placeholder_values[run_name], filepath)
-            except Exception as e:
-                logging.error(f"Failed on running {run_name}. Error: {str(e)}")
-                print(f"Failed on running {run_name}. Error: {str(e)}. Moving on to the next run.")
-            
-            pbar.update(1)
+        try:
+            process_xy_sequences(failed, run_name, stitchtype, overlay, naming_template, start_child, end_child, placeholder_values[run_name], filepath)
+        except Exception as e:
+            logging.error(f"Failed on running {run_name}. Error: {str(e)}")
 
     if failed:
         logging.warning(f"All XY sequences have been processed except for: {failed}")
-        print("All XY sequences have been processed except for: ", failed)
     else:   
         logging.info("All XY sequences have been processed successfully!")
-        print("All XY sequences have been processed successfully!")
 
 def get_channel_orders():
-    print("Enter the channel names in order, from first opened to last.")
+    print("\nEnter the channel names in order, from first opened to last.")
     print("Press Enter on an empty line when you're finished.")
     print("Note: The last channel should typically be 'Overlay'.")
     
@@ -102,7 +92,7 @@ def validate_csv(csv_file_path):
                 errors.append(f"Missing required fields: {', '.join(missing_fields)}")
 
             # Validate data in each row
-            for row_num, row in enumerate(reader, start=2):  # start=2 because row 1 is headers
+            for row_num, row in enumerate(reader, start=2):
                 if row['Run Name']:
                     # Validate integer fields
                     for field in ['Start Child', 'End Child']:
@@ -173,43 +163,39 @@ def process_xy_sequences(failed, run_name, stitchtype, overlay, naming_template,
     run_tree_item.expand()
     run_tree_item.click_input()
 
-    total_sequences = end_child - start_child + 1
-    with tqdm(total=total_sequences, desc=f"Processing {run_name}", unit="sequence") as pbar:
-        for i in range(start_child - 1, end_child):
-            try:
-                child = run_tree_item.children()[i]
-                xy_name = child.window_text()
-                logging.info(f"Processing {xy_name}")
-                child.click_input()
-                stitch_button = main_window.child_window(title="Stitch")
-                stitch_button.click_input()
+    for i in range(start_child - 1, end_child):
+        try:
+            child = run_tree_item.children()[i]
+            xy_name = child.window_text()
+            logging.info(f"Processing {xy_name}")
+            child.click_input()
+            stitch_button = main_window.child_window(title="Stitch")
+            stitch_button.click_input()
 
-                select_stitch_type(stitchtype)
-                check_for_image()
-                
-                image_stitch = main_window.child_window(auto_id="ImageJointMainForm", title="Image Stitch")
-                
-                close_button = image_stitch.child_window(auto_id="_buttonCancel", title="Cancel")
-                
-                image_stitch.set_focus()
-                start_stitching(overlay)
-                
-                delay_time = wait_for_wide_image_viewer()
-                process_delay_time = max(delay_time * (len(channel_orders_list) - 0.7), delay_time)
-                logging.info(f"Waiting for {process_delay_time:.2f} seconds")
-                time.sleep(process_delay_time)
-                disable_caps_lock()
-                name_files(naming_template, placeholder_values, xy_name, delay_time, filepath)
-                
-                image_stitch.set_focus()
-                close_button.click_input()
-                logging.info("Closing stitch image...")
-                
-                pbar.update(1)
-            except Exception as e:
-                logging.error(f"Failed on running {xy_name}. Error: {str(e)}")
-                failed.append(xy_name)
-                pbar.update(1)
+            select_stitch_type(stitchtype)
+            check_for_image()
+            
+            image_stitch = main_window.child_window(auto_id="ImageJointMainForm", title="Image Stitch")
+            
+            close_button = image_stitch.child_window(auto_id="_buttonCancel", title="Cancel")
+            
+            image_stitch.set_focus()
+            start_stitching(overlay)
+            
+            delay_time = wait_for_wide_image_viewer()
+            process_delay_time = max(delay_time * (len(channel_orders_list) - 0.7), delay_time)
+            logging.info(f"Waiting for {process_delay_time:.2f} seconds")
+            time.sleep(process_delay_time)
+            disable_caps_lock()
+            name_files(naming_template, placeholder_values, xy_name, delay_time, filepath)
+            
+            image_stitch.set_focus()
+            close_button.click_input()
+            logging.info("Closing stitch image...")
+            
+        except Exception as e:
+            logging.error(f"Failed on running {xy_name}. Error: {str(e)}")
+            failed.append(xy_name)
 
     logging.info(f"Completed processing for {run_name}")
 
@@ -222,24 +208,19 @@ def select_stitch_type(stitchtype):
 def check_for_image():
     assert os.path.exists(IMAGE_PATH)
     start_time = time.time()
-    logging.info(f"Searching for image: {IMAGE_PATH}")
-    print(f"Searching for image: {IMAGE_PATH}")
     while True:
         try:
             location = pyautogui.locateOnScreen(IMAGE_PATH, grayscale=True, confidence=0.95)
             if location is not None:
                 pyautogui.click(location)
                 logging.info("Image found and clicked!")
-                print("Image found and clicked!")
                 return
         except Exception:
             elapsed_time = round(time.time() - start_time, 0)
             logging.info(f"Time elapsed: {elapsed_time} s")
-            print(f"Time elapsed: {elapsed_time} s")
             time.sleep(2)
             if elapsed_time > 10 * 60:
                 logging.error("Image not found after 10 minutes... terminating search.")
-                print("Image not found after 10 minutes... terminating search.")
                 sys.exit()
 
 def start_stitching(overlay):
@@ -268,7 +249,6 @@ def disable_caps_lock():
     if hllDll.GetKeyState(VK_CAPITAL):
         send_keys('{CAPSLOCK}')
         logging.info("Caps Lock disabled.")
-        print("Caps Lock disabled.")
 
 def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
     global channel_orders_list
@@ -287,7 +267,6 @@ def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
             send_keys(filepath)
             send_keys('{ENTER}{TAB 6}')
             logging.info(f"Filepath set to: {filepath}")
-            print(f"Filepath set to: {filepath}")
 
         channel = channel_orders_list[i]
         try:
@@ -297,16 +276,13 @@ def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
 
             file_name = naming_template.format(**format_dict)
             logging.info(f"Naming file: {file_name}")
-            print(f"Naming file: {file_name}")
             time.sleep(1)
             send_keys(file_name)
             send_keys('{TAB 2}{ENTER}')
         except KeyError as e:
             logging.error(f"Error: Missing placeholder {e} in naming template for {xy_name}")
-            print(f"Error: Missing placeholder {e} in naming template for {xy_name}")
         except Exception as e:
             logging.error(f"Unexpected error occurred while naming file for {xy_name}: {str(e)}")
-            print(f"Unexpected error occurred while naming file for {xy_name}: {str(e)}")
 
         close_image(delay, channel)
 
@@ -326,7 +302,6 @@ def close_image(delay, channel):
     time.sleep(0.1)
     send_keys('{TAB}{ENTER}')
     logging.info(f"{channel} image closed.")
-    print(f"{channel} image closed.")
 
 def display_splash_art():
     splash_art = r"""
@@ -348,13 +323,11 @@ def get_main_window():
         return main_window
     except Exception as e:
         logging.error(f"BZ-X800 Analyzer not found. Error: {str(e)}")
-        print("BZ-X800 Analyzer not found. Please open the application and try again. Press Enter to retry.")
         input()
         return get_main_window()
 
 def run_tests():
     logging.info("Running tests...")
-    print("Running tests...")
     
     tests_passed = True
 
@@ -365,7 +338,6 @@ def run_tests():
         logging.info("Main window connection test passed.")
     except Exception as e:
         logging.error(f"Main window connection test failed: {str(e)}")
-        print(f"Main window connection test failed: {str(e)}")
         tests_passed = False
 
     # Test CSV reading
@@ -386,15 +358,12 @@ def run_tests():
         logging.info("CSV reading and validation test passed.")
     except Exception as e:
         logging.error(f"CSV reading and validation test failed: {str(e)}")
-        print(f"CSV reading and validation test failed: {str(e)}")
         tests_passed = False
 
     if tests_passed:
         logging.info("All tests passed successfully.")
-        print("All tests passed successfully.")
     else:
         logging.error("Some tests failed. Please check the logs for details.")
-        print("Some tests failed. Please check the logs for details.")
 
     return tests_passed
 
@@ -408,11 +377,7 @@ if __name__ == "__main__":
             main()
         else:
             logging.error("Tests failed. Please check the logs and fix any issues before running the main program.")
-            print("Tests failed. Please check the logs and fix any issues before running the main program.")
     except Exception as e:
         logging.critical(f"An unexpected error occurred: {str(e)}")
-        print(f"An unexpected error occurred: {str(e)}")
-        print("Please check the log file for more details.")
     finally:
         logging.info("Program execution completed.")
-        print("Program execution completed.")
