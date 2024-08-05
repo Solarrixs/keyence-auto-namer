@@ -216,10 +216,9 @@ def check_for_image():
                 logging.info("Image found and clicked!")
                 return
         except Exception:
-            elapsed_time = round(time.time() - start_time, 0)
-            logging.info(f"Time elapsed: {elapsed_time} s")
+            logging.info("Time elapsed:", round(time.time() - start_time, 0), "s")
             time.sleep(2)
-            if elapsed_time > 10 * 60:
+            if time.time() - start_time > 10 * 60:
                 logging.error("Image not found after 10 minutes... terminating search.")
                 sys.exit()
 
