@@ -1,10 +1,11 @@
 import pyautogui
+import sys
 import time
 import os
-import sys
 import logging
 import csv
 from pywinauto.application import Application
+from pywinauto.findwindows import ElementNotFoundError
 from pywinauto import Desktop
 from pywinauto.keyboard import send_keys
 
@@ -21,44 +22,51 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s - %(message)s',
                     handlers=[
                         logging.FileHandler(LOG_FILE),
-                        logging.StreamHandler()
                     ])
 
 # Global variable for channel order
 channel_orders_list = []
 
+def terminate_program(error_message):
+    logging.critical(f"Critical error occurred: {error_message}")
+    logging.info("Terminating program due to critical error.")
+    print("A critical error occurred. Program terminated. Check the log file for details.")
+    sys.exit(1)
+
 def main():
     global channel_orders_list
     logging.info("Starting Keyence Auto Namer")
 
-    channel_orders_list = get_channel_orders()
-    
-    csv_file_path = input("Enter the path to your CSV configuration file: ")
-    
-    # Validate CSV
-    validation_errors = validate_csv(csv_file_path)
-    if validation_errors:
-        logging.error("CSV Validation Errors:")
-        for error in validation_errors:
-            logging.error(error)
-        return
+    try:
+        channel_orders_list = get_channel_orders()
+        
+        csv_file_path = input("Enter the path to your CSV configuration file: ")
+        
+        # Validate CSV
+        validation_errors = validate_csv(csv_file_path)
+        if validation_errors:
+            logging.error("CSV Validation Errors:")
+            for error in validation_errors:
+                logging.error(error)
+            return
 
-    run_configs, placeholder_values = read_csv_config(csv_file_path)
+        run_configs, placeholder_values = read_csv_config(csv_file_path)
 
-    failed = []
+        failed = []
 
-    for run_config in run_configs:
-        run_name, stitchtype, overlay, naming_template, filepath, start_child, end_child = run_config
-
-        try:
+        for run_config in run_configs:
+            run_name, stitchtype, overlay, naming_template, filepath, start_child, end_child = run_config
             process_xy_sequences(failed, run_name, stitchtype, overlay, naming_template, start_child, end_child, placeholder_values[run_name], filepath)
-        except Exception as e:
-            logging.error(f"Failed on running {run_name}. Error: {str(e)}")
 
-    if failed:
-        logging.warning(f"All XY sequences have been processed except for: {failed}")
-    else:   
-        logging.info("All XY sequences have been processed successfully!")
+        if failed:
+            logging.warning(f"All XY sequences have been processed except for: {failed}")
+            print(f"Processing failed for the following XY sequences: {failed}")
+        else:   
+            logging.info("All XY sequences have been processed successfully!")
+
+    except Exception as e:
+        error_message = f"Unexpected error in main function: {str(e)}"
+        terminate_program(error_message)
 
 def get_channel_orders():
     print("\nEnter the channel names in order, from first opened to last.")
@@ -142,10 +150,9 @@ def read_csv_config(csv_file_path):
                     xy_name = row['XY Name']
                     if xy_name:
                         placeholder_values[current_run][xy_name] = {}
-                        for i in range(1, 10):
-                            key = f'key{i}'
-                            if key in row and row[key]:
-                                placeholder_values[current_run][xy_name][key] = row[key]
+                        for key, value in row.items():
+                            if key.startswith('key') and value:
+                                placeholder_values[current_run][xy_name][key] = value
 
         logging.info(f"Successfully read configuration from {csv_file_path}")
     except Exception as e:
@@ -156,45 +163,57 @@ def read_csv_config(csv_file_path):
 
 def process_xy_sequences(failed, run_name, stitchtype, overlay, naming_template, start_child, end_child, placeholder_values, filepath):
     logging.info(f"Starting process_xy_sequences for {run_name}")
-    main_window = get_main_window()
-    main_window.set_focus()
-    run_tree_item = main_window.child_window(title=run_name, control_type="TreeItem")
-    run_tree_item.expand()
-    run_tree_item.click_input()
+    try:
+        main_window = get_main_window()
+        main_window.set_focus()
+        run_tree_item = main_window.child_window(title=run_name, control_type="TreeItem")
+        run_tree_item.expand()
+        run_tree_item.click_input()
 
-    for i in range(start_child - 1, end_child):
-        try:
-            child = run_tree_item.children()[i]
-            xy_name = child.window_text()
-            logging.info(f"Processing {xy_name}")
-            child.click_input()
-            stitch_button = main_window.child_window(title="Stitch")
-            stitch_button.click_input()
+        for i in range(start_child - 1, end_child):
+            try:
+                child = run_tree_item.children()[i]
+                xy_name = child.window_text()
+                logging.info(f"Processing {xy_name}")
+                child.click_input()
+                stitch_button = main_window.child_window(title="Stitch")
+                stitch_button.click_input()
 
-            select_stitch_type(stitchtype)
-            check_for_image()
-            
-            image_stitch = main_window.child_window(auto_id="ImageJointMainForm", title="Image Stitch")
-            
-            close_button = image_stitch.child_window(auto_id="_buttonCancel", title="Cancel")
-            
-            image_stitch.set_focus()
-            start_stitching(overlay)
-            
-            delay_time = wait_for_wide_image_viewer()
-            process_delay_time = max(delay_time * (len(channel_orders_list) - 0.7), delay_time)
-            logging.info(f"Waiting for {process_delay_time:.2f} seconds")
-            time.sleep(process_delay_time)
-            disable_caps_lock()
-            name_files(naming_template, placeholder_values, xy_name, delay_time, filepath)
-            
-            image_stitch.set_focus()
-            close_button.click_input()
-            logging.info("Closing stitch image...")
-            
-        except Exception as e:
-            logging.error(f"Failed on running {xy_name}. Error: {str(e)}")
-            failed.append(xy_name)
+                select_stitch_type(stitchtype)
+                check_for_image()
+                
+                image_stitch = main_window.child_window(auto_id="ImageJointMainForm", title="Image Stitch")
+                
+                close_button = image_stitch.child_window(auto_id="_buttonCancel", title="Cancel")
+                
+                image_stitch.set_focus()
+                start_stitching(overlay)
+                
+                delay_time = wait_for_wide_image_viewer()
+                process_delay_time = max(delay_time * (len(channel_orders_list) - 0.7), delay_time)
+                logging.info(f"Waiting for {process_delay_time:.2f} seconds")
+                time.sleep(process_delay_time)
+                disable_caps_lock()
+                name_files(naming_template, placeholder_values, xy_name, delay_time, filepath)
+                
+                image_stitch.set_focus()
+                close_button.click_input()
+                logging.info(f"Successfully processed {xy_name}")
+                print(f"{xy_name} processed.")
+                
+            except ElementNotFoundError as e:
+                error_message = f"Failed to find element while processing {xy_name}. Error: {str(e)}"
+                terminate_program(error_message)
+            except Exception as e:
+                logging.error(f"Failed on running {xy_name}. Error: {str(e)}")
+                failed.append(xy_name)
+
+    except ElementNotFoundError as e:
+        error_message = f"Failed to find main window or run tree item. Error: {str(e)}"
+        terminate_program(error_message)
+    except Exception as e:
+        error_message = f"Unexpected error in process_xy_sequences: {str(e)}"
+        terminate_program(error_message)
 
     logging.info(f"Completed processing for {run_name}")
 
@@ -215,7 +234,7 @@ def check_for_image():
                 logging.info("Image found and clicked!")
                 return
         except Exception:
-            logging.info("Time elapsed:", round(time.time() - start_time, 0), "s")
+            logging.info(f"Time elapsed: {round(time.time() - start_time, 0)} s")
             time.sleep(2)
             if time.time() - start_time > 10 * 60:
                 logging.error("Image not found after 10 minutes... terminating search.")
@@ -253,6 +272,8 @@ def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
     windows = Desktop(backend="uia").windows()
     matching_windows = [win for win in windows if WIDE_IMAGE_VIEWER_TITLE in win.window_text()]
 
+    reversed_channels = channel_orders_list[::-1]
+
     for i in range(len(matching_windows)):
         last_window = matching_windows[i]
         last_window.set_focus()
@@ -262,20 +283,19 @@ def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
         
         if i == 0 and filepath != "":
             send_keys('{TAB 6}{ENTER}')
-            send_keys(filepath)
+            pyautogui.write(filepath)
             send_keys('{ENTER}{TAB 6}')
             logging.info(f"Filepath set to: {filepath}")
 
-        channel = channel_orders_list[i]
+        channel = reversed_channels[i]
         try:
-            format_dict = {f'key{k}': '' for k in range(1, 10)}  # Initialize all placeholders
-            format_dict.update(placeholder_values[xy_name])  # Update with actual values
+            format_dict = placeholder_values.get(xy_name, {})
             format_dict['C'] = channel
 
             file_name = naming_template.format(**format_dict)
             logging.info(f"Naming file: {file_name}")
             time.sleep(1)
-            send_keys(file_name)
+            pyautogui.write(file_name)
             send_keys('{TAB 2}{ENTER}')
         except KeyError as e:
             logging.error(f"Error: Missing placeholder {e} in naming template for {xy_name}")
@@ -319,8 +339,8 @@ def get_main_window():
         app = Application(backend="uia").connect(title=ANALYZER_TITLE)
         main_window = app.window(title=ANALYZER_TITLE)
         return main_window
-    except Exception as e:
-        logging.error(f"BZ-X800 Analyzer not found. Error: {str(e)}")
+    except Exception:
+        logging.error("BZ-X800 Analyzer not found. Open the program and press enter to try again.")
         input()
         return get_main_window()
 
