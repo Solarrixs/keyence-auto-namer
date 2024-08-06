@@ -292,6 +292,7 @@ def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
         export_in_original_scale()
         
         if i == 0 and filepath != "":
+            # ! Issue here.
             time.sleep(1)
             pyautogui.press('tab', presses=6, interval=0.1)
             pyautogui.press('enter')
@@ -299,9 +300,10 @@ def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
             pyautogui.write(filepath)
             time.sleep(0.1)
             pyautogui.press('enter')
-            time.sleep(0.1)
-            pyautogui.press('tab', presses=6, interval=0.1)
+            time.sleep(0.5)
+            pyautogui.press('tab', presses=6, interval=0.5)
             logging.info(f"Filepath set to: {filepath}")
+            sys.exit()
 
         channel = reversed_channels[i]
         try:
