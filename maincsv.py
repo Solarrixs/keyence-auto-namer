@@ -8,9 +8,6 @@ from pywinauto.application import Application
 from pywinauto.findwindows import ElementNotFoundError
 from pywinauto import Desktop
 
-# ! Allow users to repeat inputting the CSV file path if it's invalid and have a print function to state that
-# ! Error: Missing placeholder 'key1' in naming template for XY01
-
 # Constants
 LOG_FILE = 'keyence_auto_namer.log'
 IMAGE_PATH = os.path.join(os.path.dirname(__file__), 'image.png')
@@ -42,15 +39,21 @@ def main():
     try:
         channel_orders_list = get_channel_orders()
         
-        csv_file_path = input("\nEnter the path to your CSV configuration file: ")
-        
-        # Validate CSV
-        validation_errors = validate_csv(csv_file_path)
-        if validation_errors:
-            logging.error("CSV Validation Errors:")
-            for error in validation_errors:
-                logging.error(error)
-            return
+        while True:
+            csv_file_path = input("\nEnter the path to your CSV configuration file: ")
+            
+            # Validate CSV
+            validation_errors = validate_csv(csv_file_path)
+            if validation_errors:
+                logging.error("CSV Validation Errors:")
+                for error in validation_errors:
+                    logging.error(error)
+                print("The CSV file is invalid. Please check the following errors and try again:")
+                for error in validation_errors:
+                    print(f"- {error}")
+                continue  # Invalid Path. Continues the loop.
+            
+            break # Valid CSV
 
         run_configs, placeholder_values = read_csv_config(csv_file_path)
 
