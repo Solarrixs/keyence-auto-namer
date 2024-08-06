@@ -7,7 +7,9 @@ import csv
 from pywinauto.application import Application
 from pywinauto.findwindows import ElementNotFoundError
 from pywinauto import Desktop
-from pywinauto.keyboard import send_keys
+
+# ! Allow users to repeat inputting the CSV file path if it's invalid and have a print function to state that
+# ! Error: Missing placeholder 'key1' in naming template for XY01
 
 # Constants
 LOG_FILE = 'keyence_auto_namer.log'
@@ -40,7 +42,7 @@ def main():
     try:
         channel_orders_list = get_channel_orders()
         
-        csv_file_path = input("Enter the path to your CSV configuration file: ")
+        csv_file_path = input("\nEnter the path to your CSV configuration file: ")
         
         # Validate CSV
         validation_errors = validate_csv(csv_file_path)
@@ -71,7 +73,7 @@ def main():
 def get_channel_orders():
     print("\nEnter the channel names in order, from first opened to last.")
     print("Press Enter on an empty line when you're finished.")
-    print("Note: The last channel should typically be 'Overlay'.")
+    print("Note: The last channel should typically be 'Overlay'.\n")
     
     channels = []
     while True:
@@ -178,8 +180,8 @@ def process_xy_sequences(failed, run_name, stitchtype, overlay, naming_template,
                 child.click_input()
                 stitch_button = main_window.child_window(title="Stitch")
                 stitch_button.click_input()
-
-                select_stitch_type(stitchtype)
+                
+                select_stitch_type(stitchtype)                
                 check_for_image()
                 
                 image_stitch = main_window.child_window(auto_id="ImageJointMainForm", title="Image Stitch")
@@ -216,37 +218,42 @@ def process_xy_sequences(failed, run_name, stitchtype, overlay, naming_template,
         terminate_program(error_message)
 
     logging.info(f"Completed processing for {run_name}")
+    print(f"Completed processing for {run_name}")
 
 def select_stitch_type(stitchtype):
     if stitchtype == "F":
-        send_keys('f{ENTER}')
+        pyautogui.press('f')
+        pyautogui.press('enter')
     elif stitchtype == "L":
-        send_keys('l')
+        pyautogui.press('l')
 
 def check_for_image():
-    assert os.path.exists(IMAGE_PATH)
+    logging.info(f"Image path exists: {os.path.exists(IMAGE_PATH)}")
     start_time = time.time()
     while True:
         try:
             location = pyautogui.locateOnScreen(IMAGE_PATH, grayscale=True, confidence=0.95)
             if location is not None:
                 pyautogui.click(location)
-                logging.info("Image found and clicked!")
+                print("Image found!")
+                logging.info("Image found!")
                 return
         except Exception:
             logging.info(f"Time elapsed: {round(time.time() - start_time, 0)} s")
             time.sleep(2)
             if time.time() - start_time > 10 * 60:
                 logging.error("Image not found after 10 minutes... terminating search.")
+                print("Image not found after 10 minutes... terminating search.")
                 sys.exit()
 
 def start_stitching(overlay):
-    send_keys('{TAB 6}{RIGHT}')
+    pyautogui.press('tab', presses=6)
+    pyautogui.press('right')
     if overlay == "Y":
-        send_keys('{TAB 3}')
+        pyautogui.press('tab', presses=3)
     elif overlay == "N":
-        send_keys('{TAB 2}')
-    send_keys('{ENTER}')
+        pyautogui.press('tab', presses=2)
+    pyautogui.press('enter')
 
 def wait_for_wide_image_viewer():
     start_time = time.time()
@@ -264,7 +271,7 @@ def disable_caps_lock():
     hllDll = ctypes.WinDLL ("User32.dll")
     VK_CAPITAL = 0x14
     if hllDll.GetKeyState(VK_CAPITAL):
-        send_keys('{CAPSLOCK}')
+        pyautogui.press('capslock')
         logging.info("Caps Lock disabled.")
 
 def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
@@ -282,9 +289,15 @@ def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
         export_in_original_scale()
         
         if i == 0 and filepath != "":
-            send_keys('{TAB 6}{ENTER}')
+            time.sleep(1)
+            pyautogui.press('tab', presses=6, interval=0.1)
+            pyautogui.press('enter')
+            time.sleep(0.1)
             pyautogui.write(filepath)
-            send_keys('{ENTER}{TAB 6}')
+            time.sleep(0.1)
+            pyautogui.press('enter')
+            time.sleep(0.1)
+            pyautogui.press('tab', presses=6, interval=0.1)
             logging.info(f"Filepath set to: {filepath}")
 
         channel = reversed_channels[i]
@@ -296,7 +309,9 @@ def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
             logging.info(f"Naming file: {file_name}")
             time.sleep(1)
             pyautogui.write(file_name)
-            send_keys('{TAB 2}{ENTER}')
+            pyautogui.press('tab', presses=2)
+            time.sleep(0.1)
+            pyautogui.press('enter')
         except KeyError as e:
             logging.error(f"Error: Missing placeholder {e} in naming template for {xy_name}")
         except Exception as e:
@@ -312,14 +327,19 @@ def click_file_button(window):
     file_button.click_input()
 
 def export_in_original_scale():
-    send_keys('{TAB 4}{ENTER}{TAB}{ENTER}')
+    pyautogui.press('tab', presses=4)
+    pyautogui.press('enter')
+    pyautogui.press('tab', presses=1)
+    pyautogui.press('enter')
 
 def close_image(delay, channel):
-    time.sleep(delay/3)
-    send_keys('%{F4}')
+    time.sleep(delay/3) # ! Arbitary value. Figure out a way to prevent this hardcoded result.
+    pyautogui.hotkey('alt', 'f4')
     time.sleep(0.1)
-    send_keys('{TAB}{ENTER}')
-    logging.info(f"{channel} image closed.")
+    pyautogui.press('tab', presses=1)
+    time.sleep(0.1)
+    pyautogui.press('enter')
+    print(f"{channel} image closed.")
 
 def display_splash_art():
     splash_art = r"""
