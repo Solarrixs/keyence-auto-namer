@@ -30,8 +30,7 @@ channel_orders_list = []
 def main():
     global channel_orders_list
     logging.info("Starting Keyence Auto Namer")
-    
-    # Prompt for channel order
+
     channel_orders_list = get_channel_orders()
     
     csv_file_path = input("Enter the path to your CSV configuration file: ")
