@@ -113,15 +113,16 @@ def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
         interactions.click_file_button(last_window)
         interactions.export_in_original_scale()
         
-        save_as_dialog = constants.get_desktop().window(title="Save As")
+        save_as_dialog = constants.get_main_window().child_window(title="Save As")
         address_bar = save_as_dialog.child_window(title="Address", control_type="Edit")
         filename_field = save_as_dialog.child_window(title="File name:", control_type="Edit")
-        
+       
         if i == 0 and filepath != "":
             while True:
                 try:
-                    address_bar.set_focus()
-                    address_bar.set_edit_text(filepath)
+                    address_bar.click() # ! THIS DOESN'T WORK
+                    print("Worked!")
+                    pyautogui.write(filepath)
                     pyautogui.press('enter')
                     logging.info(f"Filepath set to: {filepath}")
                     break
