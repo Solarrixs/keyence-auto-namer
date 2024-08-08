@@ -113,25 +113,33 @@ def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
         interactions.click_file_button(last_window)
         interactions.export_in_original_scale()
         
-        save_as_dialog = constants.get_main_window().child_window(title="Save As")
-        address_bar = save_as_dialog.child_window(title="Address", control_type="Edit")
-        filename_field = save_as_dialog.child_window(title="File name:", control_type="Edit")
+        # save_as_dialog = constants.get_main_window().child_window(title="Save As")
+        # address_bar = save_as_dialog.child_window(title="Address", control_type="Edit")
+        # filename_field = save_as_dialog.child_window(title="File name:", control_type="Edit")
        
+        # if i == 0 and filepath != "":
+        #     while True:
+        #         try:
+        #             address_bar.click() # ! THIS DOESN'T WORK
+        #             print("Worked!")
+        #             pyautogui.write(filepath)
+        #             pyautogui.press('enter')
+        #             logging.info(f"Filepath set to: {filepath}")
+        #             break
+        #         except Exception as e:
+        #             logging.error(f"Error setting filepath: {str(e)}")
+        #             print(f"An error occurred while setting the filepath to: {filepath}")
+        #             input("Please fix the issue manually and press Enter to continue with the program.")
+        #             logging.info("User manually fixed the filepath issue. Continuing with the program.")
+        #             break
+        
         if i == 0 and filepath != "":
-            while True:
-                try:
-                    address_bar.click() # ! THIS DOESN'T WORK
-                    print("Worked!")
-                    pyautogui.write(filepath)
-                    pyautogui.press('enter')
-                    logging.info(f"Filepath set to: {filepath}")
-                    break
-                except Exception as e:
-                    logging.error(f"Error setting filepath: {str(e)}")
-                    print(f"An error occurred while setting the filepath to: {filepath}")
-                    input("Please fix the issue manually and press Enter to continue with the program.")
-                    logging.info("User manually fixed the filepath issue. Continuing with the program.")
-                    break
+            pyautogui.press('tab', presses=6)
+            pyautogui.press('enter')
+            pyautogui.write(filepath)
+            pyautogui.press('enter')
+            pyautogui.press('tab', presses=6)
+            print(f"Filepath set to: {filepath}")
 
         channel = reversed_channels[i]
         try:
@@ -140,7 +148,6 @@ def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
             file_name = naming_template.format(**format_dict)
             
             logging.info(f"Naming file: {file_name}")
-            filename_field.set_focus()
             time.sleep(1)
             pyautogui.write(file_name)
             pyautogui.press('tab', presses=2)
