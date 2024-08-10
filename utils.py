@@ -1,6 +1,7 @@
 import sys
 import logging
 import time
+import os
 import csv
 from constants import REQUIRED_FIELDS
 
@@ -76,7 +77,7 @@ def read_csv_config(csv_file_path):
 def terminate_program(error_message):
     logging.critical(f"Critical error occurred: {error_message}")
     logging.info("Terminating program due to critical error.")
-    print("A critical error occurred. Program terminated. Check the log file for details.")
+    print(f"An error occured: {error_message}")
     sys.exit(1)
 
 def get_channel_orders():
@@ -96,6 +97,44 @@ def get_channel_orders():
     
     logging.info(f"Channel orders set: {channels}")
     return channels
+
+def check_file_conflicts(csv_file, channels):
+    def get_templated_filenames(reader, channels):
+        templated_names = []
+        for row in reader:
+            if row['XY Name']:
+                template = row['Naming Template']
+                keys = {k: v for k, v in row.items() if k.startswith('key')}
+                for channel in channels:
+                    filename = template.format(**keys, C=channel)
+                    templated_names.append((filename, row['Filepath']))
+        return templated_names
+
+    def check_conflicts(templated_names):
+        conflicts = []
+        for filename, filepath in templated_names:
+            full_path = os.path.join(filepath, filename)
+            if os.path.exists(full_path):
+                conflicts.append(full_path)
+        return conflicts
+
+    def print_conflicts(conflicts):
+        if conflicts:
+            print("The following files already exist and would conflict:")
+            for conflict in conflicts:
+                print(f"  - {conflict}")
+        else:
+            print("No conflicts found.")
+
+    # Main execution
+    with open(csv_file, 'r', newline='') as f:
+        reader = csv.DictReader(f)
+        templated_names = get_templated_filenames(reader, channels)
+    
+    conflicts = check_conflicts(templated_names)
+    print_conflicts(conflicts)
+
+    return conflicts
 
 def display_splash_art():
     splash_art = r"""

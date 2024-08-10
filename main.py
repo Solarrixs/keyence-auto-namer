@@ -33,6 +33,20 @@ def main():
             break # Valid CSV
 
         run_configs, placeholder_values = utils.read_csv_config(csv_file_path)
+        
+        conflicts = utils.check_file_conflicts(csv_file_path, channel_orders_list)
+        
+        if conflicts is []:
+            logging.info("No file conflicts found.")
+            print("No file conflicts found.")
+        else:
+            logging.info("File conflicts found. Prompting user to fix errors.")
+            print("The following files already exist and would conflict:")
+            for conflict in conflicts:
+                logging.error(f"  - {conflict}")
+                print(f"  - {conflict}")
+            print("Please resolve the conflicts and run the program again.")
+            utils.terminate_program("File conflicts found. Please resolve the conflicts and try again.")
 
         failed = []
 
@@ -85,8 +99,8 @@ def process_xy_sequences(failed, run_name, stitchtype, overlay, naming_template,
             
             image_stitch.set_focus()
             close_button.click_input()
-            logging.info(f"Successfully processed {xy_name}")
-            print(f"{xy_name} processed.")
+            logging.info(f"Processed {xy_name}")
+            print(f"{run_name} {xy_name} processed.")
 
         except Exception as e:
             logging.error(f"Failed on running {xy_name}. Error: {str(e)}")
@@ -95,9 +109,6 @@ def process_xy_sequences(failed, run_name, stitchtype, overlay, naming_template,
     except Exception as e:
         error_message = f"Unexpected error in process_xy_sequences: {str(e)}"
         utils.terminate_program(error_message)
-
-    logging.info(f"Completed processing for {run_name}")
-    print(f"Completed processing for {run_name}")
 
 def name_files(naming_template, placeholder_values, xy_name, delay, filepath):
     global channel_orders_list
