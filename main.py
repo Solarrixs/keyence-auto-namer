@@ -36,7 +36,7 @@ def main():
         
         conflicts = utils.check_file_conflicts(csv_file_path, channel_orders_list)
         
-        if conflicts is []:
+        if conflicts == []:
             logging.info("No file conflicts found.")
             print("No file conflicts found.")
         else:
@@ -179,8 +179,6 @@ def check_for_image():
             location = pyautogui.locateOnScreen(constants.IMAGE_PATH, grayscale=True, confidence=0.95)
             if location is not None:
                 pyautogui.click(location)
-                print("Image found!")
-                logging.info("Image found!")
                 return
         except Exception:
             logging.info(f"Time elapsed: {round(time.time() - start_time, 0)} s")

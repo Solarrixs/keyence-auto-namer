@@ -59,4 +59,4 @@ def close_image(delay, channel):
     pyautogui.press('tab', presses=1)
     time.sleep(0.1)
     pyautogui.press('enter')
-    print(f"{channel} image closed.")
+    logging.info(f"{channel} image closed.")
